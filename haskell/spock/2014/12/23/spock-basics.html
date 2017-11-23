@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>
+    
+      Spock basics &middot; Watch Chris Learn
+    
+  </title>
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Libre+Baskerville:400,400i,700">
+</head>
+
+  <body>
+      <nav class="nav">
+    <div class="nav-container">
+      <a href="/">
+        <h2 class="nav-title">Watch Chris Learn</h2>
+      </a>
+      <ul>
+        <li><a href="/about">About</a></li>
+        <li><a href="/">Posts</a></li>
+      </ul>
+  </div>
+</nav>
+
+
+
+    <main>
+      <div class="post">
+  <div class="post-info">
+    <span>Written by</span>
+    
+        Chris Schneider
+    
+
+    
+      <br>
+      <span>on&nbsp;</span><time datetime="2014-12-23 18:46:19 -0600">December 23, 2014</time>
+    
+  </div>
+
+  <h1 class="post-title">Spock basics</h1>
+  <div class="post-line"></div>
+
+  <h2 id="spock-intro---minimal-web-framework">Spock Intro - Minimal Web Framework</h2>
+
+<p>Spock is a slick little web framework in Haskell that builds off of Scotty’s
+legacy - although it apparently doesn’t share code any more.</p>
+
+<p>It supports middleware, and a nice routing api.</p>
+
+<p>For instance, to setup logging and static file serving, you just wire up two Wai middlewares.</p>
+
+<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">appMiddleware</span> <span class="o">::</span> <span class="kt">SpockT</span> <span class="kt">IO</span> <span class="nb">()</span>
+<span class="n">appMiddleware</span> <span class="o">=</span> <span class="kr">do</span>
+  <span class="n">middleware</span> <span class="n">logStdoutDev</span>
+  <span class="n">middleware</span> <span class="o">$</span> <span class="n">staticPolicy</span> <span class="p">(</span><span class="n">noDots</span> <span class="o">&gt;-&gt;</span> <span class="n">addBase</span> <span class="s">"static"</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>Then the routes get built up (referencing the actual handler functions defined elsewhere)</p>
+
+<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">appRoutes</span> <span class="o">::</span> <span class="kt">SpockT</span> <span class="kt">IO</span> <span class="nb">()</span>
+<span class="n">appRoutes</span> <span class="o">=</span> <span class="kr">do</span>
+  <span class="n">get</span> <span class="s">"/"</span>          <span class="o">$</span> <span class="kt">Static</span><span class="o">.</span><span class="n">root</span>
+  <span class="n">get</span> <span class="s">"/users"</span>     <span class="o">$</span> <span class="kt">Users</span><span class="o">.</span><span class="n">index</span>
+  <span class="n">get</span> <span class="s">"/users/:id"</span> <span class="o">$</span> <span class="kt">Users</span><span class="o">.</span><span class="n">show</span>
+</code></pre></div></div>
+
+<p>Then connect the pieces up and run on port 3000.</p>
+
+<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">main</span> <span class="o">=</span> <span class="n">runSpock</span> <span class="mi">3000</span> <span class="p">(</span><span class="n">appMiddleware</span> <span class="o">&gt;&gt;</span> <span class="n">appRoutes</span><span class="p">)</span>
+</code></pre></div></div>
+
+<h2 id="handlers">Handlers</h2>
+
+<p>I found myself repeating the specific ActionT type (the Spock route handler),
+so I type aliased it to be specific to my app (wrapping IO).  This has the
+benefit of letting me change it in only one spot if/when I decide that I need a
+different monad transformer stack.</p>
+
+<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kr">type</span> <span class="kt">HandlerM</span> <span class="o">=</span> <span class="kt">ActionT</span> <span class="kt">IO</span>
+</code></pre></div></div>
+
+<p>Then the actual handlers just have <code class="highlighter-rouge">HandlerM</code> and the return value (mostly just unit)</p>
+
+<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">root</span> <span class="o">::</span> <span class="kt">HandlerM</span> <span class="nb">()</span>
+<span class="n">root</span> <span class="o">=</span> <span class="n">text</span> <span class="s">"Hello!"</span>
+</code></pre></div></div>
+
+<p>There are a TON of helper functions to use in the context of a handler -
+<code class="highlighter-rouge">redirect</code>, <code class="highlighter-rouge">json</code>, <code class="highlighter-rouge">html</code>, <code class="highlighter-rouge">setHeader</code>, etc, etc.</p>
+
+<h2 id="more-and-more">More and More</h2>
+
+<p>Spock claims to support sessions, database connection pooling and more, but I
+haven’t had a chance to dive into that integration.</p>
+
+
+
+</div>
+
+<div class="pagination">
+  
+    <a href="/haskell/2015/01/20/pretty-printing-a-tree-with-text-dot-prettyprint.html" class="left arrow">&#8592;</a>
+  
+  
+    <a href="/scala/scalding/hadoop/2014/05/23/typed-scalding-pipes.html" class="right arrow">&#8594;</a>
+  
+
+  <a href="#" class="top">Top</a>
+</div>
+
+    </main>
+
+    <footer>
+  <span>
+    &copy; <time datetime="2017-11-22 21:57:53 -0700">2017</time> . Made with Jekyll using the <a href="https://github.com/chesterhow/tale/">Tale</a> theme.
+  </span>
+</footer>
+
+  </body>
+</html>

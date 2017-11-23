@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>
+    
+      Typed Scalding Pipes &middot; Watch Chris Learn
+    
+  </title>
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Libre+Baskerville:400,400i,700">
+</head>
+
+  <body>
+      <nav class="nav">
+    <div class="nav-container">
+      <a href="/">
+        <h2 class="nav-title">Watch Chris Learn</h2>
+      </a>
+      <ul>
+        <li><a href="/about">About</a></li>
+        <li><a href="/">Posts</a></li>
+      </ul>
+  </div>
+</nav>
+
+
+
+    <main>
+      <div class="post">
+  <div class="post-info">
+    <span>Written by</span>
+    
+        Chris Schneider
+    
+
+    
+      <br>
+      <span>on&nbsp;</span><time datetime="2014-05-23 18:46:19 -0600">May 23, 2014</time>
+    
+  </div>
+
+  <h1 class="post-title">Typed Scalding Pipes</h1>
+  <div class="post-line"></div>
+
+  <h1 id="quick-recap">Quick Recap</h1>
+
+<p>A while back I described a Hadoop job that I implemented with Scalding
+(<a href="http://watchchrislearn.com/blog/2014/03/09/distilling-the-newest-record-with-scalding/">Distilling the Newest Record with Scalding</a>).
+To recap, the goal was to take a huge list of “facts”, each containing a single
+timestamped fact about a large piece of system data.  The goal is to get a
+recombined version of a domain object at a given time.</p>
+
+<h2 id="a-fact">A Fact</h2>
+
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w"> </span><span class="s2">"asserted_at"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-05-01T04:02:56Z"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"subject"</span><span class="p">:</span><span class="w"> </span><span class="s2">"device:123"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"property"</span><span class="p">:</span><span class="w"> </span><span class="s2">"serial_number"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"value"</span><span class="p">:</span><span class="w"> </span><span class="s2">"V29B044"</span><span class="w"> </span><span class="p">}</span><span class="w">
+</span></code></pre></div></div>
+
+<h2 id="argonaut">Argonaut.</h2>
+
+<p>The first version of this job I wrote used a built-in JSON parser.  Turns out
+that’s an iffy approach, so I turned to the <a href="http://argonaut.io/">Argonaut</a> library
+to parse my JSON into well structured Scala structs.</p>
+
+<p>This code is almost literally off the Argonaut examples. I was really impressed
+at how easy this was.</p>
+
+<div class="language-scala highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">import</span> <span class="nn">argonaut._</span>
+<span class="k">import</span> <span class="nn">Argonaut._</span>
+
+<span class="k">case</span> <span class="k">class</span> <span class="nc">Fact</span><span class="o">(</span><span class="n">asserted_at</span><span class="k">:</span> <span class="kt">String</span><span class="o">,</span> <span class="n">subject</span> <span class="k">:</span> <span class="kt">String</span><span class="o">,</span> <span class="n">property</span><span class="k">:</span> <span class="kt">String</span><span class="o">,</span> <span class="n">value</span><span class="k">:</span> <span class="kt">Json</span><span class="o">)</span>
+
+<span class="k">object</span> <span class="nc">Fact</span> <span class="o">{</span>
+  <span class="k">implicit</span> <span class="k">def</span> <span class="nc">FactCodecJson</span> <span class="k">:</span> <span class="kt">CodecJson</span><span class="o">[</span><span class="kt">Fact</span><span class="o">]</span> <span class="k">=</span>
+    <span class="n">casecodec4</span><span class="o">(</span><span class="nc">Fact</span><span class="o">.</span><span class="n">apply</span><span class="o">,</span> <span class="nc">Fact</span><span class="o">.</span><span class="n">unapply</span><span class="o">)(</span><span class="s">"asserted_at"</span><span class="o">,</span> <span class="s">"subject"</span><span class="o">,</span> <span class="s">"property"</span><span class="o">,</span> <span class="s">"value"</span><span class="o">)</span>
+<span class="o">}</span>
+</code></pre></div></div>
+
+<p>This allows me to take a string and call <code class="highlighter-rouge">decodeOption</code> on it to get a Option[Fact].</p>
+
+<h2 id="functions">Functions!</h2>
+
+<p>One of the things I really wanted to explore was splitting up the large job
+into an aggregate of lots of small jobs.  The best way to do that of course is
+using functions.</p>
+
+<p>Here’s an easy one to do the JSON parsing:</p>
+
+<div class="language-scala highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">def</span> <span class="n">parseJsonAsFact</span><span class="o">(</span><span class="n">pipe</span> <span class="k">:</span> <span class="kt">TypedPipe</span><span class="o">[</span><span class="kt">String</span><span class="o">])</span> <span class="k">:</span> <span class="kt">TypedPipe</span><span class="o">[</span><span class="kt">Fact</span><span class="o">]</span> <span class="k">=</span> <span class="o">{</span>
+  <span class="n">pipe</span>
+    <span class="o">.</span><span class="n">map</span>    <span class="o">{</span> <span class="k">_</span><span class="o">.</span><span class="n">decodeOption</span><span class="o">[</span><span class="kt">Fact</span><span class="o">]</span> <span class="o">}</span>
+    <span class="o">.</span><span class="n">filter</span> <span class="o">{</span> <span class="k">_</span><span class="o">.</span><span class="n">nonEmpty</span> <span class="o">}</span>
+    <span class="o">.</span><span class="n">map</span>    <span class="o">{</span> <span class="k">_</span><span class="o">.</span><span class="n">orNull</span> <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></div></div>
+
+<p>This takes a <code class="highlighter-rouge">TypedPipe[String]</code> and for each string, transforms it into a
+<code class="highlighter-rouge">TypedPipe[Fact]</code>, or just throws away anything that didn’t parse.</p>
+
+<h2 id="getting-the-input-and-parsing">Getting the input and parsing</h2>
+
+<p>Actually fetching input, and working with it to make output is easy.  We
+assemble our small functions with Scala’s <code class="highlighter-rouge">andThen</code> combinator.  This makes one
+large function that is named <code class="highlighter-rouge">job</code>, which we then run with the input.</p>
+
+<div class="language-scala highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">val</span> <span class="n">input_file</span>  <span class="k">=</span> <span class="n">args</span><span class="o">.</span><span class="n">getOrElse</span><span class="o">(</span><span class="s">"input"</span><span class="o">,</span>  <span class="s">"/master-dataset"</span><span class="o">)</span>
+<span class="k">val</span> <span class="n">output_file</span> <span class="k">=</span> <span class="n">args</span><span class="o">.</span><span class="n">getOrElse</span><span class="o">(</span><span class="s">"output"</span><span class="o">,</span> <span class="s">"/output"</span><span class="o">)</span>
+
+<span class="c1">// Everything is stored as a SequenceFile, where the key is the timestamp it was recorded.
+</span><span class="k">val</span> <span class="n">source</span>   <span class="k">=</span> <span class="nc">WritableSequenceFile</span><span class="o">[</span><span class="kt">DoubleWritable</span>, <span class="kt">Text</span><span class="o">](</span><span class="n">input_file</span><span class="o">,</span> <span class="o">(</span><span class="ss">'sequenceFileKey,</span> <span class="ss">'factJSON)</span><span class="o">)</span>
+<span class="k">val</span> <span class="n">rawInput</span> <span class="k">=</span> <span class="nc">TypedPipe</span><span class="o">.</span><span class="n">from</span><span class="o">(</span><span class="n">source</span><span class="o">)</span>
+<span class="k">val</span> <span class="n">input</span>    <span class="k">=</span> <span class="n">rawInput</span><span class="o">.</span><span class="n">map</span> <span class="o">{</span> <span class="k">_</span><span class="o">.</span><span class="n">_2</span><span class="o">.</span><span class="n">toString</span> <span class="o">}</span> <span class="c1">// TypedPipe[String]
+</span>
+<span class="c1">// This is a single column, so Tsv is misleading, no tabs will be output
+</span><span class="k">val</span> <span class="n">output</span> <span class="k">=</span> <span class="nc">TypedTsv</span><span class="o">[</span><span class="kt">String</span><span class="o">](</span><span class="n">output_file</span><span class="o">)</span>
+
+<span class="c1">// Build up a large function that is our entire pipeline.
+</span><span class="k">val</span> <span class="n">job</span> <span class="k">=</span> <span class="n">parseJsonAsFact</span> <span class="k">_</span> <span class="n">andThen</span>
+          <span class="c1">///// More steps here.
+</span>
+<span class="n">job</span><span class="o">(</span><span class="n">input</span><span class="o">).</span><span class="n">write</span><span class="o">(</span><span class="n">output</span><span class="o">)</span>
+</code></pre></div></div>
+
+<h2 id="finishing-up-the-job">Finishing up the job</h2>
+
+<p>Here is an example of the whole pipeline I have written. It did take me a bit
+to figure out how <code class="highlighter-rouge">filterByType</code> could be parameterized by the thing I was filtering.</p>
+
+<div class="language-scala highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// TypedPipe[String] =&gt; TypedPipe[String], which is handily our input and output types.
+</span><span class="k">val</span> <span class="n">job</span> <span class="k">=</span> <span class="n">facts</span><span class="o">.</span><span class="n">parseJsonAsFact</span> <span class="k">_</span>                        <span class="n">andThen</span>   <span class="c1">//    TypedPipe[Fact]
+</span>          <span class="o">(</span><span class="n">facts</span><span class="o">.</span><span class="n">filterByType</span> <span class="k">_</span><span class="o">).</span><span class="n">curried</span><span class="o">(</span><span class="s">"observations"</span><span class="o">)</span> <span class="n">andThen</span>   <span class="c1">// =&gt; TypedPipe[Fact] (only observation related ones)
+</span>          <span class="n">facts</span><span class="o">.</span><span class="n">filterNewest</span> <span class="k">_</span>                           <span class="n">andThen</span>   <span class="c1">// =&gt; TypedPipe[Fact] (only the newest of any given subject/property)
+</span>          <span class="n">createMeasurementDate</span> <span class="k">_</span>                        <span class="n">andThen</span>   <span class="c1">// =&gt; TypedPipe[Fact] (new records with measurement_date in the stream)
+</span>          <span class="n">mergeObservations</span> <span class="k">_</span>                            <span class="n">andThen</span>   <span class="c1">// =&gt; TypedPipe[Observation] combine facts into observations
+</span>          <span class="n">renderAsJson</span> <span class="k">_</span>                                           <span class="c1">// =&gt; TypedPipe[String] observations spun out as json
+</span>
+<span class="k">def</span> <span class="n">filterByType</span><span class="o">(</span><span class="n">filter</span> <span class="k">:</span> <span class="kt">String</span><span class="o">,</span> <span class="n">pipe</span> <span class="k">:</span> <span class="kt">TypedPipe</span><span class="o">[</span><span class="kt">Fact</span><span class="o">])</span> <span class="k">:</span> <span class="kt">TypedPipe</span><span class="o">[</span><span class="kt">Fact</span><span class="o">]</span> <span class="k">=</span> <span class="o">{</span>
+  <span class="n">pipe</span><span class="o">.</span><span class="n">filter</span> <span class="o">{</span> <span class="k">_</span><span class="o">.</span><span class="n">subject</span><span class="o">.</span><span class="n">startsWith</span><span class="o">(</span><span class="n">filter</span><span class="o">)</span> <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></div></div>
+
+<p>The filtering is easy. But there’s a little trick in that the <code class="highlighter-rouge">.groupBy</code> call
+changes a <code class="highlighter-rouge">TypedPipe</code> into a <code class="highlighter-rouge">Grouped</code>, which has two type arguments - the
+“group key” and the type of the values that match that key.</p>
+
+<p>Second note: the custom sorting of facts was a hurdle I had to get over, turned
+out to be easy - just define the sorting, and call it in a rather unintuitive
+way.</p>
+
+<div class="language-scala highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">def</span> <span class="n">filterNewest</span><span class="o">(</span><span class="n">pipe</span> <span class="k">:</span> <span class="kt">TypedPipe</span><span class="o">[</span><span class="kt">Fact</span><span class="o">])</span> <span class="k">:</span> <span class="kt">TypedPipe</span><span class="o">[</span><span class="kt">Fact</span><span class="o">]</span> <span class="k">=</span> <span class="o">{</span>
+  <span class="n">pipe</span>
+    <span class="o">.</span><span class="n">groupBy</span> <span class="o">{</span> <span class="n">fact</span> <span class="k">:</span> <span class="kt">Fact</span> <span class="o">=&gt;</span> <span class="o">(</span><span class="n">fact</span><span class="o">.</span><span class="n">subject</span><span class="o">,</span> <span class="n">fact</span><span class="o">.</span><span class="n">property</span><span class="o">)</span> <span class="o">}</span> <span class="c1">// =&gt; Grouped[Fact, (String, String)]
+</span>    <span class="o">.</span><span class="n">sortedReverseTake</span><span class="o">(</span><span class="mi">1</span><span class="o">)(</span><span class="nc">AssertedAtOrdering</span><span class="o">)</span>
+    <span class="o">.</span><span class="n">values</span>
+    <span class="o">.</span><span class="n">flatten</span>
+<span class="o">}</span>
+
+<span class="k">object</span> <span class="nc">AssertedAtOrdering</span> <span class="k">extends</span> <span class="nc">Ordering</span><span class="o">[</span><span class="kt">Fact</span><span class="o">]</span> <span class="o">{</span>
+  <span class="k">def</span> <span class="n">compare</span><span class="o">(</span><span class="n">a</span><span class="k">:</span><span class="kt">Fact</span><span class="o">,</span> <span class="n">b</span><span class="k">:</span><span class="kt">Fact</span><span class="o">)</span> <span class="k">=</span> <span class="n">a</span><span class="o">.</span><span class="n">asserted_at</span> <span class="n">compare</span> <span class="n">b</span><span class="o">.</span><span class="n">asserted_at</span>
+<span class="o">}</span>
+</code></pre></div></div>
+
+<p>I won’t go into all the pieces of my whole pipeline, most of it isn’t all that
+interesting, but I do want to note that you can return more or less records from a pipe than came in. It doesn’t have to be a 1:1 tranformation.</p>
+
+<p>For example, I needed both the date and the full datetime in my observation
+domain object.  This function does that for me by splitting the pipe in two
+with filters, sidelining the uninteresting half (<code class="highlighter-rouge">not_measurement_at_pipe</code>),
+returning multiple values from the <code class="highlighter-rouge">measurement_at_pipe</code>.  Finally the
+sidelined pipe can be merged back into the stream.</p>
+
+<div class="language-scala highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">def</span> <span class="n">createMeasurementDate</span><span class="o">(</span><span class="n">pipe</span> <span class="k">:</span> <span class="kt">TypedPipe</span><span class="o">[</span><span class="kt">Fact</span><span class="o">])</span> <span class="k">:</span> <span class="kt">TypedPipe</span><span class="o">[</span><span class="kt">Fact</span><span class="o">]</span> <span class="k">=</span> <span class="o">{</span>
+  <span class="k">val</span> <span class="n">measurement_at_pipe</span>     <span class="k">=</span> <span class="n">pipe</span><span class="o">.</span><span class="n">filter</span>    <span class="o">{</span> <span class="n">fact</span> <span class="k">:</span> <span class="kt">Fact</span> <span class="o">=&gt;</span> <span class="n">fact</span><span class="o">.</span><span class="n">property</span> <span class="o">==</span> <span class="s">"measurement_at"</span> <span class="o">}</span>
+  <span class="k">val</span> <span class="n">not_measurement_at_pipe</span> <span class="k">=</span> <span class="n">pipe</span><span class="o">.</span><span class="n">filterNot</span> <span class="o">{</span> <span class="n">fact</span> <span class="k">:</span> <span class="kt">Fact</span> <span class="o">=&gt;</span> <span class="n">fact</span><span class="o">.</span><span class="n">property</span> <span class="o">==</span> <span class="s">"measurement_at"</span> <span class="o">}</span>
+  <span class="k">val</span> <span class="n">converted_pipe</span> <span class="k">=</span> <span class="n">measurement_at_pipe</span>
+    <span class="o">.</span><span class="n">flatMap</span> <span class="o">{</span> <span class="n">fact</span> <span class="k">:</span> <span class="kt">Fact</span> <span class="o">=&gt;</span>
+      <span class="nc">List</span><span class="o">(</span>
+            <span class="n">fact</span><span class="o">,</span>
+            <span class="n">fact</span><span class="o">.</span><span class="n">copy</span><span class="o">(</span><span class="n">property</span> <span class="k">=</span> <span class="s">"measurement_date"</span><span class="o">,</span>
+                      <span class="n">value</span>    <span class="k">=</span> <span class="n">jString</span><span class="o">(</span><span class="n">fact</span><span class="o">.</span><span class="n">value</span><span class="o">.</span><span class="n">stringOr</span><span class="o">(</span><span class="s">"0000-00-00"</span><span class="o">).</span><span class="n">substring</span><span class="o">(</span><span class="mi">0</span><span class="o">,</span> <span class="s">"yyyy-mm-dd"</span><span class="o">.</span><span class="n">length</span><span class="o">)))</span>
+          <span class="o">)</span>
+    <span class="o">}</span>
+
+  <span class="n">converted_pipe</span> <span class="o">++</span> <span class="n">not_measurement_at_pipe</span>
+<span class="o">}</span>
+</code></pre></div></div>
+
+<h2 id="final-thoughts">Final Thoughts</h2>
+
+<p>I really like the Typed api for writing jobs.  The Scala compiler informs you
+of errors (which is a much faster testing cycle than waiting for Hadoop to run
+a compiled jar and fail at some point.  That makes it a 10 second response
+time, versus a 5 minute response time).</p>
+
+<p>In addition, it’s so much easier to keep track of real classes and work on
+them, than trying to track sets of untyped, named fields.</p>
+
+<p>So use the TypedApi, and let Scala do more of the work for you.</p>
+
+
+
+</div>
+
+<div class="pagination">
+  
+    <a href="/haskell/spock/2014/12/23/spock-basics.html" class="left arrow">&#8592;</a>
+  
+  
+    <a href="/haskell/2014/04/03/machines.html" class="right arrow">&#8594;</a>
+  
+
+  <a href="#" class="top">Top</a>
+</div>
+
+    </main>
+
+    <footer>
+  <span>
+    &copy; <time datetime="2017-11-22 21:57:53 -0700">2017</time> . Made with Jekyll using the <a href="https://github.com/chesterhow/tale/">Tale</a> theme.
+  </span>
+</footer>
+
+  </body>
+</html>

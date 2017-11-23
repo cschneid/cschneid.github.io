@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>
+    
+      $! threadsafety &middot; Watch Chris Learn
+    
+  </title>
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Libre+Baskerville:400,400i,700">
+</head>
+
+  <body>
+      <nav class="nav">
+    <div class="nav-container">
+      <a href="/">
+        <h2 class="nav-title">Watch Chris Learn</h2>
+      </a>
+      <ul>
+        <li><a href="/about">About</a></li>
+        <li><a href="/">Posts</a></li>
+      </ul>
+  </div>
+</nav>
+
+
+
+    <main>
+      <div class="post">
+  <div class="post-info">
+    <span>Written by</span>
+    
+        Chris Schneider
+    
+
+    
+      <br>
+      <span>on&nbsp;</span><time datetime="2013-12-10 21:15:06 -0700">December 10, 2013</time>
+    
+  </div>
+
+  <h1 class="post-title">$! threadsafety</h1>
+  <div class="post-line"></div>
+
+  <p>I was investigating the <code class="highlighter-rouge">$!</code> variable in Ruby, specifically if it is truely a
+global variable the way the leading <code class="highlighter-rouge">$</code> implies.</p>
+
+<p>I made a quick test case, where I attempt to raise errors, then print out the
+message.  This should detect a race condition after a few attempts.</p>
+
+<div class="language-ruby highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">t1</span> <span class="o">=</span> <span class="no">Thread</span><span class="p">.</span><span class="nf">new</span> <span class="k">do</span>
+  <span class="mi">100000</span><span class="p">.</span><span class="nf">times</span> <span class="k">do</span>
+    <span class="k">begin</span>
+      <span class="k">raise</span> <span class="s2">"T1 Error"</span>
+    <span class="k">rescue</span>
+      <span class="nb">puts</span> <span class="s2">"T1 - </span><span class="si">#{</span><span class="vg">$!</span><span class="si">}</span><span class="s2">"</span>
+    <span class="k">end</span>
+  <span class="k">end</span>
+<span class="k">end</span>
+
+<span class="n">t2</span> <span class="o">=</span> <span class="no">Thread</span><span class="p">.</span><span class="nf">new</span> <span class="k">do</span>
+  <span class="mi">100000</span><span class="p">.</span><span class="nf">times</span> <span class="k">do</span> <span class="o">|</span><span class="n">i</span><span class="o">|</span>
+    <span class="k">begin</span>
+      <span class="k">raise</span> <span class="s2">"T2 Error"</span>
+    <span class="k">rescue</span>
+      <span class="nb">puts</span> <span class="s2">"T2 - </span><span class="si">#{</span><span class="vg">$!</span><span class="si">}</span><span class="s2">"</span>
+    <span class="k">end</span>
+  <span class="k">end</span>
+<span class="k">end</span>
+
+<span class="n">t1</span><span class="p">.</span><span class="nf">join</span>
+<span class="n">t2</span><span class="p">.</span><span class="nf">join</span>
+</code></pre></div></div>
+
+<p>But the worse that happens is the newline getting printed out of order:</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>$ ruby globals.rb | grep "T1.*T2"
+T1 - T1 ErrorT2 - T2 Error
+T1 - T1 ErrorT2 - T2 Error
+T1 - T1 ErrorT2 - T2 Error
+</code></pre></div></div>
+
+<h3 id="result">Result</h3>
+
+<p>So the result of all this is that no, the <code class="highlighter-rouge">$!</code> is not a real global, but instead
+thread-local (at least).</p>
+
+<p>Hopefully I can go dig into the code to figure out what scope it really is.</p>
+
+
+</div>
+
+<div class="pagination">
+  
+    <a href="/scala/scalding/hadoop/2014/03/09/distilling-the-newest-record-with-scalding.html" class="left arrow">&#8592;</a>
+  
+  
+    <a href="/haskell/2013/12/01/working-entirely-in-eithert.html" class="right arrow">&#8594;</a>
+  
+
+  <a href="#" class="top">Top</a>
+</div>
+
+    </main>
+
+    <footer>
+  <span>
+    &copy; <time datetime="2017-11-22 21:57:53 -0700">2017</time> . Made with Jekyll using the <a href="https://github.com/chesterhow/tale/">Tale</a> theme.
+  </span>
+</footer>
+
+  </body>
+</html>

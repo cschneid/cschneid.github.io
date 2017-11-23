@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>
+    
+      Playing with the Either monad in Haskell &middot; Watch Chris Learn
+    
+  </title>
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Libre+Baskerville:400,400i,700">
+</head>
+
+  <body>
+      <nav class="nav">
+    <div class="nav-container">
+      <a href="/">
+        <h2 class="nav-title">Watch Chris Learn</h2>
+      </a>
+      <ul>
+        <li><a href="/about">About</a></li>
+        <li><a href="/">Posts</a></li>
+      </ul>
+  </div>
+</nav>
+
+
+
+    <main>
+      <div class="post">
+  <div class="post-info">
+    <span>Written by</span>
+    
+        Chris Schneider
+    
+
+    
+      <br>
+      <span>on&nbsp;</span><time datetime="2013-11-28 22:50:09 -0700">November 28, 2013</time>
+    
+  </div>
+
+  <h1 class="post-title">Playing with the Either monad in Haskell</h1>
+  <div class="post-line"></div>
+
+  <p>After playing with the bitcoin price fetcher, I was disappointed at how… hard
+it was to deal with the multiple layers of potential errors.  I started looking
+into the <code class="highlighter-rouge">errors</code> package on Hackage for a way out.  It is a one-stop-shop for
+all the standard error handling mechanisms in Haskell. It reexports the
+standard Either and Maybe types, and also adds many helper functions to move
+between Either and Maybe types, in addition to helping out with the various
+transformer versions of both (MaybeT and EitherT)</p>
+
+<p>I will play with MaybeT and EitherT later, for now I’m happy to have figured out
+the Either monad, and want to share the annotated example I’ve cobbled together.</p>
+
+<p>Grab the code into a file, <code class="highlighter-rouge">cabal install errors</code>, and start toying with the
+various places I use the <code class="highlighter-rouge">Pass</code> and <code class="highlighter-rouge">Error</code> types in the <code class="highlighter-rouge">doWork</code> function.
+You’ll see how nicely Haskell handles a long string of things, where any one of
+them could fail out.</p>
+
+<p>I’ll have to go rewrite the bitcoin scraper with my newfound knowledge…</p>
+
+<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kr">import</span> <span class="nn">Control.Error</span>
+
+<span class="c1">-- A type for my example functions to pass or fail on.</span>
+<span class="kr">data</span> <span class="kt">Flag</span> <span class="o">=</span> <span class="kt">Pass</span> <span class="o">|</span> <span class="kt">Error</span>
+
+<span class="n">main</span> <span class="o">::</span> <span class="kt">IO</span> <span class="nb">()</span>
+<span class="n">main</span> <span class="o">=</span> <span class="kr">do</span>
+  <span class="n">putStrLn</span> <span class="s">"Starting to do work:"</span>
+  <span class="kr">let</span> <span class="n">result</span> <span class="o">=</span> <span class="n">doWork</span>
+  <span class="kr">case</span> <span class="n">result</span> <span class="kr">of</span>
+    <span class="kt">Left</span>  <span class="n">val</span> <span class="o">-&gt;</span> <span class="n">putStrLn</span> <span class="o">$</span> <span class="s">"Work Result: Failed</span><span class="se">\n</span><span class="s"> "</span> <span class="o">++</span> <span class="n">val</span>
+    <span class="kt">Right</span> <span class="n">val</span> <span class="o">-&gt;</span> <span class="n">putStrLn</span> <span class="o">$</span> <span class="s">"Work Result: Passed</span><span class="se">\n</span><span class="s"> "</span> <span class="o">++</span> <span class="n">val</span>
+  <span class="n">putStrLn</span> <span class="s">"Ok, finished. Have a nice day"</span>
+
+<span class="c1">-- This is a driver function, simulating an error prone path</span>
+<span class="c1">-- through the app.  Each step could possibly error out, and</span>
+<span class="c1">-- when any of them do, we want to just bail out.</span>
+<span class="c1">--</span>
+<span class="c1">-- Remember the definition of the Either monad is:</span>
+<span class="c1">-- instance Monad (Either e) where</span>
+<span class="c1">--   return = Right</span>
+<span class="c1">--   Right m &gt;&gt;= k = k m</span>
+<span class="c1">--   Left e  &gt;&gt;= _ = Left e</span>
+<span class="c1">--</span>
+<span class="c1">-- So a Left value short circuits the rest of the Monad, and a Right value</span>
+<span class="c1">-- passes the value off to the next step.</span>
+<span class="n">doWork</span> <span class="o">::</span> <span class="kt">Either</span> <span class="kt">String</span> <span class="kt">String</span>
+<span class="n">doWork</span> <span class="o">=</span> <span class="kr">do</span> <span class="c1">-- use do notation syntax sugar for the Either monad</span>
+
+    <span class="c1">-- First, do something that may or may not work. We get back a type of</span>
+    <span class="c1">-- Either String String (since that's the type of the example</span>
+    <span class="c1">-- eitherFailure function here)</span>
+    <span class="n">x</span> <span class="o">&lt;-</span> <span class="n">eitherFailure</span> <span class="kt">Pass</span> <span class="s">"Initial Thing"</span>
+
+    <span class="c1">-- Based on what we get in x, just go ahead and attempt it.</span>
+    <span class="c1">-- Note that the function eitherFailure takes a simple</span>
+    <span class="c1">-- String as its argument.  So we didn't have to unwrap the</span>
+    <span class="c1">-- first Either value.</span>
+    <span class="n">y</span> <span class="o">&lt;-</span> <span class="n">eitherFailure</span> <span class="kt">Error</span> <span class="p">(</span><span class="s">"Second Thing "</span> <span class="o">++</span> <span class="n">x</span><span class="p">)</span>
+
+    <span class="c1">-- We can't just wire a Maybe value in the middle here,</span>
+    <span class="c1">-- since it doesn't typecheck. (Maybe isn't an Either),</span>
+    <span class="c1">-- even though they play similarly. If we just tried, we'd get:</span>
+
+    <span class="c1">-- z &lt;- maybeFailure Error</span>
+    <span class="c1">-- Couldn't match type `Maybe' with `Either String'</span>
+
+    <span class="c1">-- But instead, we can use Control.Error.Util.note to convert</span>
+    <span class="c1">-- an "empty" Nothing value into a Left value with a descriptive</span>
+    <span class="c1">-- error.  So now we'd get a proper Either value we can chain</span>
+    <span class="c1">-- into this overall monad.</span>
+    <span class="n">note</span> <span class="p">(</span><span class="s">"Failed the Maybe: "</span> <span class="o">++</span> <span class="n">y</span><span class="p">)</span> <span class="o">$</span> <span class="n">maybeFailure</span> <span class="kt">Pass</span> <span class="n">y</span>
+
+    <span class="c1">-- Since the last line of this `do` block is the type we plan on</span>
+    <span class="c1">-- returning, there's no `return` call needed.</span>
+
+
+<span class="c1">-- Simple function that we can use to force it to error out with a Left, or</span>
+<span class="c1">-- pass with a Right value. It just includes some helper text as its content,</span>
+<span class="c1">-- showing what happened.</span>
+<span class="n">eitherFailure</span> <span class="o">::</span> <span class="kt">Flag</span> <span class="o">-&gt;</span> <span class="kt">String</span> <span class="o">-&gt;</span> <span class="kt">Either</span> <span class="kt">String</span> <span class="kt">String</span>
+<span class="n">eitherFailure</span> <span class="kt">Pass</span>  <span class="n">val</span> <span class="o">=</span> <span class="kt">Right</span> <span class="o">$</span> <span class="s">"-&gt; Passed "</span> <span class="o">++</span> <span class="n">val</span>
+<span class="n">eitherFailure</span> <span class="kt">Error</span> <span class="n">val</span> <span class="o">=</span> <span class="kt">Left</span>  <span class="o">$</span> <span class="s">"-&gt; Failed "</span> <span class="o">++</span> <span class="n">val</span>
+
+<span class="c1">-- Simlar to eitherFailure, but return a (Just String) or a Nothing based on</span>
+<span class="c1">-- if we told it to fail.</span>
+<span class="n">maybeFailure</span> <span class="o">::</span> <span class="kt">Flag</span> <span class="o">-&gt;</span> <span class="kt">String</span> <span class="o">-&gt;</span> <span class="kt">Maybe</span> <span class="kt">String</span>
+<span class="n">maybeFailure</span> <span class="kt">Pass</span>  <span class="n">val</span> <span class="o">=</span> <span class="kt">Just</span> <span class="o">$</span> <span class="s">"-&gt; Passed maybe "</span> <span class="o">++</span> <span class="n">val</span>
+<span class="n">maybeFailure</span> <span class="kt">Error</span> <span class="kr">_</span>   <span class="o">=</span> <span class="kt">Nothing</span>
+</code></pre></div></div>
+
+<p>My favorite part of diving into the error library is that my worry from yesterday,
+<code class="highlighter-rouge">except then I’d have to switch the Maybe result out of Lens-Aeson into a “fuller” Either type.</code> is just the <code class="highlighter-rouge">note</code> function I demoed above.</p>
+
+
+
+</div>
+
+<div class="pagination">
+  
+    <a href="/haskell/2013/11/30/using-the-either-monad-inside-another-monad.html" class="left arrow">&#8592;</a>
+  
+  
+    <a href="/bitcoin/haskell/2013/11/27/same-bitcoin-price-fetcher.html" class="right arrow">&#8594;</a>
+  
+
+  <a href="#" class="top">Top</a>
+</div>
+
+    </main>
+
+    <footer>
+  <span>
+    &copy; <time datetime="2017-11-22 21:57:53 -0700">2017</time> . Made with Jekyll using the <a href="https://github.com/chesterhow/tale/">Tale</a> theme.
+  </span>
+</footer>
+
+  </body>
+</html>
