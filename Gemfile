@@ -10,6 +10,10 @@ source "https://rubygems.org"
 # Happy Jekylling!
 gem "jekyll", "~> 3.6.2"
 
+# https://github.com/yegor256/jekyll-github-deploy
+# Deploys to github
+gem 'jgd'
+
 # This is the default theme for new Jekyll sites. You may change this to anything you like.
 # gem "minima", "~> 2.0"
 
