@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>
+    
+      EitherT inside of IO &middot; Watch Chris Learn
+    
+  </title>
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Libre+Baskerville:400,400i,700">
+</head>
+
+  <body>
+      <nav class="nav">
+    <div class="nav-container">
+      <a href="/">
+        <h2 class="nav-title">Watch Chris Learn</h2>
+      </a>
+      <ul>
+        <li><a href="/about">About</a></li>
+        <li><a href="/">Posts</a></li>
+      </ul>
+  </div>
+</nav>
+
+
+
+    <main>
+      <div class="post">
+  <div class="post-info">
+    <span>Written by</span>
+    
+        Chris Schneider
+    
+
+    
+      <br>
+      <span>on&nbsp;</span><time datetime="2013-11-30 14:46:12 -0700">November 30, 2013</time>
+    
+  </div>
+
+  <h1 class="post-title">EitherT inside of IO</h1>
+  <div class="post-line"></div>
+
+  <p>Keeping with our series of posts about using the Either Monad in various ways:</p>
+
+<ol>
+  <li><a href="/blog/2013/11/28/playing-with-the-either-monad/">Playing with the Either Monad</a></li>
+  <li><a href="/blog/2013/11/30/using-the-either-monad-inside-another-monad/">Using the Either Monad Inside Another Monad</a></li>
+</ol>
+
+<p>This time, I expand from Either to EitherT, which allows us to interleave an
+outer monad with an inner one.</p>
+
+<p>When we call <code class="highlighter-rouge">runEitherT</code> with a <code class="highlighter-rouge">do</code> block, we are making a new context, where
+we make an EitherT type, wrapped around an inner IO type.  I am not sure what
+the exact type there is, I’ll have to look into that later.</p>
+
+<p>I import <code class="highlighter-rouge">Control.Monad.Trans</code> to get access to the <code class="highlighter-rouge">lift</code> function. That lets
+us go down a layer into that EitherT wrapped around the IO to run IO commands.</p>
+
+<p>You can see how in the workflow of the EitherT section, it asks for some text,
+does some “work” that may fail, and then asks for the next bit of text to work
+on.</p>
+
+<p>The coolest part is that if the first bit fails, it bails out of the whole
+workflow with the correct <code class="highlighter-rouge">Left</code> value, not even asking for the second bit
+of input.</p>
+
+<p>The only other gotcha is that <code class="highlighter-rouge">EitherT</code> isn’t quite the same as a normal
+<code class="highlighter-rouge">Either</code> type, so you have to use functions to convert between them.
+<code class="highlighter-rouge">hoistEither</code> and <code class="highlighter-rouge">hoistMaybe</code> take a normal version of <code class="highlighter-rouge">Either/Maybe</code> and turn it
+into <code class="highlighter-rouge">EitherT/MaybeT</code>.</p>
+
+<p>Similarly, we had to use <code class="highlighter-rouge">noteT</code> instead of <code class="highlighter-rouge">note</code>.  Same behavior, but it just
+works on the transformed versions of the types.</p>
+
+<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kr">import</span> <span class="nn">Control.Error</span>
+<span class="kr">import</span> <span class="nn">Control.Monad.Trans</span>
+
+<span class="c1">-- A type for my example functions to pass or fail on.</span>
+<span class="kr">data</span> <span class="kt">Flag</span> <span class="o">=</span> <span class="kt">Pass</span> <span class="o">|</span> <span class="kt">Error</span>
+
+<span class="n">main</span> <span class="o">::</span> <span class="kt">IO</span> <span class="nb">()</span>
+<span class="n">main</span> <span class="o">=</span> <span class="kr">do</span>
+  <span class="n">putStrLn</span> <span class="s">"Starting to do work:"</span>
+
+  <span class="n">result</span> <span class="o">&lt;-</span> <span class="n">runEitherT</span> <span class="o">$</span> <span class="kr">do</span>
+      <span class="n">lift</span> <span class="o">$</span> <span class="n">putStrLn</span> <span class="s">"Give me the first input please:"</span>
+      <span class="n">initialText</span> <span class="o">&lt;-</span> <span class="n">lift</span> <span class="n">getLine</span>
+      <span class="n">x</span> <span class="o">&lt;-</span> <span class="n">hoistEither</span> <span class="o">$</span> <span class="n">eitherFailure</span> <span class="kt">Error</span> <span class="n">initialText</span>
+
+      <span class="n">lift</span> <span class="o">$</span> <span class="n">putStrLn</span> <span class="s">"Give me the second input please:"</span>
+      <span class="n">secondText</span> <span class="o">&lt;-</span> <span class="n">lift</span> <span class="n">getLine</span>
+      <span class="n">y</span> <span class="o">&lt;-</span> <span class="n">hoistEither</span> <span class="o">$</span> <span class="n">eitherFailure</span> <span class="kt">Pass</span> <span class="p">(</span><span class="n">secondText</span> <span class="o">++</span> <span class="n">x</span><span class="p">)</span>
+
+      <span class="n">noteT</span> <span class="p">(</span><span class="s">"Failed the Maybe: "</span> <span class="o">++</span> <span class="n">y</span><span class="p">)</span> <span class="o">$</span> <span class="n">hoistMaybe</span> <span class="o">$</span> <span class="n">maybeFailure</span> <span class="kt">Pass</span> <span class="n">y</span>
+
+  <span class="kr">case</span> <span class="n">result</span> <span class="kr">of</span>
+    <span class="kt">Left</span>  <span class="n">val</span> <span class="o">-&gt;</span> <span class="n">putStrLn</span> <span class="o">$</span> <span class="s">"Work Result: Failed</span><span class="se">\n</span><span class="s"> "</span> <span class="o">++</span> <span class="n">val</span>
+    <span class="kt">Right</span> <span class="n">val</span> <span class="o">-&gt;</span> <span class="n">putStrLn</span> <span class="o">$</span> <span class="s">"Work Result: Passed</span><span class="se">\n</span><span class="s"> "</span> <span class="o">++</span> <span class="n">val</span>
+
+  <span class="n">putStrLn</span> <span class="s">"Ok, finished. Have a nice day"</span>
+
+<span class="c1">-- Simple function that we can use to force it to error out with a Left, or</span>
+<span class="c1">-- pass with a Right value. It just includes some helper text as its content,</span>
+<span class="c1">-- showing what happened.</span>
+<span class="n">eitherFailure</span> <span class="o">::</span> <span class="kt">Flag</span> <span class="o">-&gt;</span> <span class="kt">String</span> <span class="o">-&gt;</span> <span class="kt">Either</span> <span class="kt">String</span> <span class="kt">String</span>
+<span class="n">eitherFailure</span> <span class="kt">Pass</span>  <span class="n">val</span> <span class="o">=</span> <span class="kt">Right</span> <span class="o">$</span> <span class="s">"-&gt; Passed "</span> <span class="o">++</span> <span class="n">val</span>
+<span class="n">eitherFailure</span> <span class="kt">Error</span> <span class="n">val</span> <span class="o">=</span> <span class="kt">Left</span>  <span class="o">$</span> <span class="s">"-&gt; Failed "</span> <span class="o">++</span> <span class="n">val</span>
+
+<span class="c1">-- Simlar to eitherFailure, but return a (Just String) or a Nothing based on</span>
+<span class="c1">-- if we told it to fail.</span>
+<span class="n">maybeFailure</span> <span class="o">::</span> <span class="kt">Flag</span> <span class="o">-&gt;</span> <span class="kt">String</span> <span class="o">-&gt;</span> <span class="kt">Maybe</span> <span class="kt">String</span>
+<span class="n">maybeFailure</span> <span class="kt">Pass</span>  <span class="n">val</span> <span class="o">=</span> <span class="kt">Just</span> <span class="o">$</span> <span class="s">"-&gt; Passed maybe "</span> <span class="o">++</span> <span class="n">val</span>
+<span class="n">maybeFailure</span> <span class="kt">Error</span> <span class="kr">_</span>   <span class="o">=</span> <span class="kt">Nothing</span>
+</code></pre></div></div>
+
+
+</div>
+
+<div class="pagination">
+  
+    <a href="/haskell/2013/12/01/working-entirely-in-eithert.html" class="left arrow">&#8592;</a>
+  
+  
+    <a href="/haskell/2013/11/30/using-the-either-monad-inside-another-monad.html" class="right arrow">&#8594;</a>
+  
+
+  <a href="#" class="top">Top</a>
+</div>
+
+    </main>
+
+    <footer>
+  <span>
+    &copy; <time datetime="2017-11-22 21:55:23 -0700">2017</time> . Made with Jekyll using the <a href="https://github.com/chesterhow/tale/">Tale</a> theme.
+  </span>
+</footer>
+
+  </body>
+</html>

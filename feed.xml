@@ -1,0 +1,886 @@
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.6.2">Jekyll</generator><link href="http://www.watchchrislearn.com/feed.xml" rel="self" type="application/atom+xml" /><link href="http://www.watchchrislearn.com/" rel="alternate" type="text/html" /><updated>2017-11-22T21:55:23-07:00</updated><id>http://www.watchchrislearn.com/</id><title type="html">Watch Chris Learn</title><subtitle>Things I learn while programming.</subtitle><entry><title type="html">Pretty Printing a Tree with Text.PrettyPrint</title><link href="http://www.watchchrislearn.com/haskell/2015/01/20/pretty-printing-a-tree-with-text-dot-prettyprint.html" rel="alternate" type="text/html" title="Pretty Printing a Tree with Text.PrettyPrint" /><published>2015-01-19T20:40:25-07:00</published><updated>2015-01-19T20:40:25-07:00</updated><id>http://www.watchchrislearn.com/haskell/2015/01/20/pretty-printing-a-tree-with-text-dot-prettyprint</id><content type="html" xml:base="http://www.watchchrislearn.com/haskell/2015/01/20/pretty-printing-a-tree-with-text-dot-prettyprint.html">&lt;p&gt;I looked into Haskell’s
+&lt;a href=&quot;http://hackage.haskell.org/package/pretty&quot;&gt;pretty package&lt;/a&gt;
+(and the &lt;a href=&quot;http://hackage.haskell.org/package/prettyclass&quot;&gt;prettyclass package&lt;/a&gt;)
+to print out a simple tree structure I defined.
+I wanted a nicely nested output.&lt;/p&gt;
+
+&lt;h2 id=&quot;why-not-show&quot;&gt;Why not Show?&lt;/h2&gt;
+
+&lt;p&gt;The show typeclass isn’t what we want for human readable output.
+&lt;code class=&quot;highlighter-rouge&quot;&gt;read . show&lt;/code&gt; should be the same as &lt;code class=&quot;highlighter-rouge&quot;&gt;id&lt;/code&gt;.
+This means that we can’t ever throw away extraneous data
+, and we have to be 100% sure to preserve any structure.&lt;/p&gt;
+
+&lt;p&gt;These rules get in the way of human readable output.  For example, printing a
+&lt;code class=&quot;highlighter-rouge&quot;&gt;User&lt;/code&gt; record might omit the full address if it gets too long, not include the
+bio, and generally lay out the data in a simplified manner.&lt;/p&gt;
+
+&lt;h2 id=&quot;the-pretty-typeclass&quot;&gt;The Pretty typeclass&lt;/h2&gt;
+
+&lt;p&gt;The &lt;a href=&quot;http://hackage.haskell.org/package/prettyclass&quot;&gt;prettyclass package&lt;/a&gt; defines a general typeclass for all types
+that can be printed out for human consumption.  It comes with some standard types
+defined (like Int and similar)&lt;/p&gt;
+
+&lt;p&gt;Before we talk about pretty printing, we need to look at our type first.&lt;/p&gt;
+
+&lt;div class=&quot;language-haskell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;kr&quot;&gt;data&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Tree&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;a&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Leaf&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;a&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;|&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Node&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;Tree&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;Tree&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;kr&quot;&gt;deriving&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;Show&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;A simple binary tree, where interior nodes don’t store anything, and leaves
+hold all the values.&lt;/p&gt;
+
+&lt;p&gt;We need to define an instance of our &lt;code class=&quot;highlighter-rouge&quot;&gt;Pretty&lt;/code&gt; for our type.
+As the docs say, &lt;code class=&quot;highlighter-rouge&quot;&gt;Minimal complete definition is either pPrintPrec or pPrint.&lt;/code&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;pPrintPrec&lt;/code&gt; takes a PrettyLevel, which defines the level of detailed requested.
+Since we want to show all the data in the tree, this is unnecessary for us, we can
+implement the simpler &lt;code class=&quot;highlighter-rouge&quot;&gt;pPrint&lt;/code&gt; function.&lt;/p&gt;
+
+&lt;h3 id=&quot;the-typeclass-instance-definition&quot;&gt;The typeclass instance definition&lt;/h3&gt;
+
+&lt;p&gt;Since our type is parameterized on &lt;code class=&quot;highlighter-rouge&quot;&gt;a&lt;/code&gt;, we need to limit it somehow.
+In this case, we’re going to say that if our &lt;code class=&quot;highlighter-rouge&quot;&gt;a&lt;/code&gt; is a member of &lt;code class=&quot;highlighter-rouge&quot;&gt;Pretty&lt;/code&gt;
+, then we can pretty print a whole tree of &lt;code class=&quot;highlighter-rouge&quot;&gt;a&lt;/code&gt;&lt;/p&gt;
+
+&lt;div class=&quot;language-haskell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;kr&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;nn&quot;&gt;Text.PrettyPrint.HughesPJClass&lt;/span&gt;
+
+&lt;span class=&quot;kr&quot;&gt;instance&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;Pretty&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Pretty&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;Tree&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;kr&quot;&gt;where&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;pPrint&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;tree&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;...&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h2 id=&quot;the-textprettyprint&quot;&gt;The Text.PrettyPrint&lt;/h2&gt;
+
+&lt;p&gt;The &lt;a href=&quot;http://hackage.haskell.org/package/pretty&quot;&gt;pretty package&lt;/a&gt; implements a TON of helpers to actually lay out the data.&lt;/p&gt;
+
+&lt;p&gt;In this case, our goal is to have the tree look like:&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;Node:
+  Leaf: 1
+  Node:
+    Leaf: 2
+    Leaf: 3
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Each level gets labeled by type, and nesting levels get indented by 2.&lt;/p&gt;
+
+&lt;h3 id=&quot;the-leaf-case&quot;&gt;The Leaf Case&lt;/h3&gt;
+
+&lt;p&gt;So first, lets do the &lt;code class=&quot;highlighter-rouge&quot;&gt;Leaf&lt;/code&gt; case, where we print the literal &lt;code class=&quot;highlighter-rouge&quot;&gt;Leaf:&lt;/code&gt; and then
+ask the &lt;code class=&quot;highlighter-rouge&quot;&gt;a&lt;/code&gt; type to be pretty printed itself.&lt;/p&gt;
+
+&lt;div class=&quot;language-haskell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;  &lt;span class=&quot;n&quot;&gt;pPrint&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;Leaf&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;   &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;text&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;Leaf: &quot;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;lt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;pPrint&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;a&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Pretty implements &lt;code class=&quot;highlighter-rouge&quot;&gt;&amp;lt;&amp;gt;&lt;/code&gt; the same as a monoid, combining two &lt;code class=&quot;highlighter-rouge&quot;&gt;Doc&lt;/code&gt;s into one.
+Pretty also implements a &lt;code class=&quot;highlighter-rouge&quot;&gt;&amp;lt;+&amp;gt;&lt;/code&gt; which is like &lt;code class=&quot;highlighter-rouge&quot;&gt;&amp;lt;&amp;gt;&lt;/code&gt; except it will insert a
+space between two non-empty documents.&lt;/p&gt;
+
+&lt;h3 id=&quot;the-node-case&quot;&gt;The Node case&lt;/h3&gt;
+
+&lt;p&gt;The &lt;code class=&quot;highlighter-rouge&quot;&gt;Node&lt;/code&gt; case is much more interesting.&lt;/p&gt;
+
+&lt;div class=&quot;language-haskell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;  &lt;span class=&quot;n&quot;&gt;pPrint&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;Node&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;l&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;r&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;vcat&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;text&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;Node:&quot;&lt;/span&gt;
+                           &lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;nest&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;2&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;pPrint&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;l&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+                           &lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;nest&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;2&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;pPrint&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;r&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)]&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;First we destructure the argument
+, then we build a 3 element list
+, each containing a &lt;code class=&quot;highlighter-rouge&quot;&gt;Doc&lt;/code&gt; type.
+The first one is the literal &lt;code class=&quot;highlighter-rouge&quot;&gt;Node:&lt;/code&gt; text
+, then the next two are indented by 2 spaces.
+Then we recursively call &lt;code class=&quot;highlighter-rouge&quot;&gt;pPrint&lt;/code&gt; on the left and right sub-trees.&lt;/p&gt;
+
+&lt;p&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;nest&lt;/code&gt; takes an indent level, and a document and returns a new document with the same content, except indented.&lt;/p&gt;
+
+&lt;p&gt;The &lt;code class=&quot;highlighter-rouge&quot;&gt;vcat&lt;/code&gt; function takes a list of documents, and lays them out vertically.&lt;/p&gt;
+
+&lt;p&gt;Fairly straight forward.&lt;/p&gt;
+
+&lt;h2 id=&quot;and&quot;&gt;And…&lt;/h2&gt;
+
+&lt;p&gt;I was impressed by how easy this library was to use.
+Although I was rather confused by how hard it was to use the typeclass.
+The &lt;code class=&quot;highlighter-rouge&quot;&gt;pretty&lt;/code&gt; package specifically has a module that defines the Pretty class,
+but GHC couldn’t find it.&lt;/p&gt;
+
+&lt;p&gt;I could see the use of this library in a large project, full of custom types.&lt;/p&gt;
+
+&lt;p&gt;A logging function could easily ask to &lt;code class=&quot;highlighter-rouge&quot;&gt;prettyShow&lt;/code&gt; each individual item it logs.&lt;/p&gt;
+
+&lt;p&gt;Full code is available at: https://github.com/cschneid/cschneid-pretty/&lt;/p&gt;</content><author><name>Chris Schneider</name></author><summary type="html">I looked into Haskell’s pretty package (and the prettyclass package) to print out a simple tree structure I defined. I wanted a nicely nested output.</summary></entry><entry><title type="html">Spock basics</title><link href="http://www.watchchrislearn.com/haskell/spock/2014/12/23/spock-basics.html" rel="alternate" type="text/html" title="Spock basics" /><published>2014-12-23T17:46:19-07:00</published><updated>2014-12-23T17:46:19-07:00</updated><id>http://www.watchchrislearn.com/haskell/spock/2014/12/23/spock-basics</id><content type="html" xml:base="http://www.watchchrislearn.com/haskell/spock/2014/12/23/spock-basics.html">&lt;h2 id=&quot;spock-intro---minimal-web-framework&quot;&gt;Spock Intro - Minimal Web Framework&lt;/h2&gt;
+
+&lt;p&gt;Spock is a slick little web framework in Haskell that builds off of Scotty’s
+legacy - although it apparently doesn’t share code any more.&lt;/p&gt;
+
+&lt;p&gt;It supports middleware, and a nice routing api.&lt;/p&gt;
+
+&lt;p&gt;For instance, to setup logging and static file serving, you just wire up two Wai middlewares.&lt;/p&gt;
+
+&lt;div class=&quot;language-haskell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;appMiddleware&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;::&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;SpockT&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;IO&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;()&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;appMiddleware&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;kr&quot;&gt;do&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;middleware&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;logStdoutDev&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;middleware&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;$&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;staticPolicy&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;noDots&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;addBase&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;static&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Then the routes get built up (referencing the actual handler functions defined elsewhere)&lt;/p&gt;
+
+&lt;div class=&quot;language-haskell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;appRoutes&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;::&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;SpockT&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;IO&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;()&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;appRoutes&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;kr&quot;&gt;do&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;get&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;/&quot;&lt;/span&gt;          &lt;span class=&quot;o&quot;&gt;$&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Static&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;root&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;get&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;/users&quot;&lt;/span&gt;     &lt;span class=&quot;o&quot;&gt;$&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Users&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;index&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;get&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;/users/:id&quot;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;$&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Users&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;show&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Then connect the pieces up and run on port 3000.&lt;/p&gt;
+
+&lt;div class=&quot;language-haskell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;main&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;runSpock&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;3000&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;appMiddleware&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;appRoutes&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h2 id=&quot;handlers&quot;&gt;Handlers&lt;/h2&gt;
+
+&lt;p&gt;I found myself repeating the specific ActionT type (the Spock route handler),
+so I type aliased it to be specific to my app (wrapping IO).  This has the
+benefit of letting me change it in only one spot if/when I decide that I need a
+different monad transformer stack.&lt;/p&gt;
+
+&lt;div class=&quot;language-haskell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;kr&quot;&gt;type&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;HandlerM&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;ActionT&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;IO&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Then the actual handlers just have &lt;code class=&quot;highlighter-rouge&quot;&gt;HandlerM&lt;/code&gt; and the return value (mostly just unit)&lt;/p&gt;
+
+&lt;div class=&quot;language-haskell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;root&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;::&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;HandlerM&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;()&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;root&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;text&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;Hello!&quot;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;There are a TON of helper functions to use in the context of a handler -
+&lt;code class=&quot;highlighter-rouge&quot;&gt;redirect&lt;/code&gt;, &lt;code class=&quot;highlighter-rouge&quot;&gt;json&lt;/code&gt;, &lt;code class=&quot;highlighter-rouge&quot;&gt;html&lt;/code&gt;, &lt;code class=&quot;highlighter-rouge&quot;&gt;setHeader&lt;/code&gt;, etc, etc.&lt;/p&gt;
+
+&lt;h2 id=&quot;more-and-more&quot;&gt;More and More&lt;/h2&gt;
+
+&lt;p&gt;Spock claims to support sessions, database connection pooling and more, but I
+haven’t had a chance to dive into that integration.&lt;/p&gt;</content><author><name>Chris Schneider</name></author><summary type="html">Spock Intro - Minimal Web Framework</summary></entry><entry><title type="html">Typed Scalding Pipes</title><link href="http://www.watchchrislearn.com/scala/scalding/hadoop/2014/05/23/typed-scalding-pipes.html" rel="alternate" type="text/html" title="Typed Scalding Pipes" /><published>2014-05-23T18:46:19-06:00</published><updated>2014-05-23T18:46:19-06:00</updated><id>http://www.watchchrislearn.com/scala/scalding/hadoop/2014/05/23/typed-scalding-pipes</id><content type="html" xml:base="http://www.watchchrislearn.com/scala/scalding/hadoop/2014/05/23/typed-scalding-pipes.html">&lt;h1 id=&quot;quick-recap&quot;&gt;Quick Recap&lt;/h1&gt;
+
+&lt;p&gt;A while back I described a Hadoop job that I implemented with Scalding
+(&lt;a href=&quot;http://watchchrislearn.com/blog/2014/03/09/distilling-the-newest-record-with-scalding/&quot;&gt;Distilling the Newest Record with Scalding&lt;/a&gt;).
+To recap, the goal was to take a huge list of “facts”, each containing a single
+timestamped fact about a large piece of system data.  The goal is to get a
+recombined version of a domain object at a given time.&lt;/p&gt;
+
+&lt;h2 id=&quot;a-fact&quot;&gt;A Fact&lt;/h2&gt;
+
+&lt;div class=&quot;language-json highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;asserted_at&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;2014-05-01T04:02:56Z&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+  &lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;subject&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;device:123&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+  &lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;property&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;serial_number&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+  &lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;value&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;V29B044&quot;&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h2 id=&quot;argonaut&quot;&gt;Argonaut.&lt;/h2&gt;
+
+&lt;p&gt;The first version of this job I wrote used a built-in JSON parser.  Turns out
+that’s an iffy approach, so I turned to the &lt;a href=&quot;http://argonaut.io/&quot;&gt;Argonaut&lt;/a&gt; library
+to parse my JSON into well structured Scala structs.&lt;/p&gt;
+
+&lt;p&gt;This code is almost literally off the Argonaut examples. I was really impressed
+at how easy this was.&lt;/p&gt;
+
+&lt;div class=&quot;language-scala highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;k&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;nn&quot;&gt;argonaut._&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;nn&quot;&gt;Argonaut._&lt;/span&gt;
+
+&lt;span class=&quot;k&quot;&gt;case&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;class&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Fact&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;asserted_at&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;String&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;subject&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;String&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;property&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;String&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;value&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Json&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+
+&lt;span class=&quot;k&quot;&gt;object&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Fact&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;implicit&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;FactCodecJson&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;CodecJson&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;Fact&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;]&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;casecodec4&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nc&quot;&gt;Fact&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;apply&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Fact&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;unapply&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;asserted_at&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;subject&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;property&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;value&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;This allows me to take a string and call &lt;code class=&quot;highlighter-rouge&quot;&gt;decodeOption&lt;/code&gt; on it to get a Option[Fact].&lt;/p&gt;
+
+&lt;h2 id=&quot;functions&quot;&gt;Functions!&lt;/h2&gt;
+
+&lt;p&gt;One of the things I really wanted to explore was splitting up the large job
+into an aggregate of lots of small jobs.  The best way to do that of course is
+using functions.&lt;/p&gt;
+
+&lt;p&gt;Here’s an easy one to do the JSON parsing:&lt;/p&gt;
+
+&lt;div class=&quot;language-scala highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;parseJsonAsFact&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;pipe&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;TypedPipe&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;String&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;])&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;TypedPipe&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;Fact&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;]&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;pipe&lt;/span&gt;
+    &lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;map&lt;/span&gt;    &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;_&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;decodeOption&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;Fact&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;]&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+    &lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;filter&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;_&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;nonEmpty&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+    &lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;map&lt;/span&gt;    &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;_&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;orNull&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;This takes a &lt;code class=&quot;highlighter-rouge&quot;&gt;TypedPipe[String]&lt;/code&gt; and for each string, transforms it into a
+&lt;code class=&quot;highlighter-rouge&quot;&gt;TypedPipe[Fact]&lt;/code&gt;, or just throws away anything that didn’t parse.&lt;/p&gt;
+
+&lt;h2 id=&quot;getting-the-input-and-parsing&quot;&gt;Getting the input and parsing&lt;/h2&gt;
+
+&lt;p&gt;Actually fetching input, and working with it to make output is easy.  We
+assemble our small functions with Scala’s &lt;code class=&quot;highlighter-rouge&quot;&gt;andThen&lt;/code&gt; combinator.  This makes one
+large function that is named &lt;code class=&quot;highlighter-rouge&quot;&gt;job&lt;/code&gt;, which we then run with the input.&lt;/p&gt;
+
+&lt;div class=&quot;language-scala highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;k&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;input_file&lt;/span&gt;  &lt;span class=&quot;k&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;args&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;getOrElse&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;input&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt;  &lt;span class=&quot;s&quot;&gt;&quot;/master-dataset&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;output_file&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;args&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;getOrElse&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;output&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;/output&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+
+&lt;span class=&quot;c1&quot;&gt;// Everything is stored as a SequenceFile, where the key is the timestamp it was recorded.
+&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;source&lt;/span&gt;   &lt;span class=&quot;k&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;WritableSequenceFile&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;DoubleWritable&lt;/span&gt;, &lt;span class=&quot;kt&quot;&gt;Text&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;](&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;input_file&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;'sequenceFileKey,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;'factJSON)&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;rawInput&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;TypedPipe&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;from&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;source&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;input&lt;/span&gt;    &lt;span class=&quot;k&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;rawInput&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;map&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;_&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;_2&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;toString&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;// TypedPipe[String]
+&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;// This is a single column, so Tsv is misleading, no tabs will be output
+&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;output&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;TypedTsv&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;String&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;](&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;output_file&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+
+&lt;span class=&quot;c1&quot;&gt;// Build up a large function that is our entire pipeline.
+&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;job&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;parseJsonAsFact&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;_&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;andThen&lt;/span&gt;
+          &lt;span class=&quot;c1&quot;&gt;///// More steps here.
+&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;job&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;input&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;).&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;write&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;output&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h2 id=&quot;finishing-up-the-job&quot;&gt;Finishing up the job&lt;/h2&gt;
+
+&lt;p&gt;Here is an example of the whole pipeline I have written. It did take me a bit
+to figure out how &lt;code class=&quot;highlighter-rouge&quot;&gt;filterByType&lt;/code&gt; could be parameterized by the thing I was filtering.&lt;/p&gt;
+
+&lt;div class=&quot;language-scala highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;c1&quot;&gt;// TypedPipe[String] =&amp;gt; TypedPipe[String], which is handily our input and output types.
+&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;job&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;facts&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;parseJsonAsFact&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;_&lt;/span&gt;                        &lt;span class=&quot;n&quot;&gt;andThen&lt;/span&gt;   &lt;span class=&quot;c1&quot;&gt;//    TypedPipe[Fact]
+&lt;/span&gt;          &lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;facts&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;filterByType&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;_&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;).&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;curried&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;observations&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;andThen&lt;/span&gt;   &lt;span class=&quot;c1&quot;&gt;// =&amp;gt; TypedPipe[Fact] (only observation related ones)
+&lt;/span&gt;          &lt;span class=&quot;n&quot;&gt;facts&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;filterNewest&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;_&lt;/span&gt;                           &lt;span class=&quot;n&quot;&gt;andThen&lt;/span&gt;   &lt;span class=&quot;c1&quot;&gt;// =&amp;gt; TypedPipe[Fact] (only the newest of any given subject/property)
+&lt;/span&gt;          &lt;span class=&quot;n&quot;&gt;createMeasurementDate&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;_&lt;/span&gt;                        &lt;span class=&quot;n&quot;&gt;andThen&lt;/span&gt;   &lt;span class=&quot;c1&quot;&gt;// =&amp;gt; TypedPipe[Fact] (new records with measurement_date in the stream)
+&lt;/span&gt;          &lt;span class=&quot;n&quot;&gt;mergeObservations&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;_&lt;/span&gt;                            &lt;span class=&quot;n&quot;&gt;andThen&lt;/span&gt;   &lt;span class=&quot;c1&quot;&gt;// =&amp;gt; TypedPipe[Observation] combine facts into observations
+&lt;/span&gt;          &lt;span class=&quot;n&quot;&gt;renderAsJson&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;_&lt;/span&gt;                                           &lt;span class=&quot;c1&quot;&gt;// =&amp;gt; TypedPipe[String] observations spun out as json
+&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;filterByType&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;filter&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;String&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;pipe&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;TypedPipe&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;Fact&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;])&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;TypedPipe&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;Fact&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;]&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;pipe&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;filter&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;_&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;subject&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;startsWith&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;filter&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;The filtering is easy. But there’s a little trick in that the &lt;code class=&quot;highlighter-rouge&quot;&gt;.groupBy&lt;/code&gt; call
+changes a &lt;code class=&quot;highlighter-rouge&quot;&gt;TypedPipe&lt;/code&gt; into a &lt;code class=&quot;highlighter-rouge&quot;&gt;Grouped&lt;/code&gt;, which has two type arguments - the
+“group key” and the type of the values that match that key.&lt;/p&gt;
+
+&lt;p&gt;Second note: the custom sorting of facts was a hurdle I had to get over, turned
+out to be easy - just define the sorting, and call it in a rather unintuitive
+way.&lt;/p&gt;
+
+&lt;div class=&quot;language-scala highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;filterNewest&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;pipe&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;TypedPipe&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;Fact&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;])&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;TypedPipe&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;Fact&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;]&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;pipe&lt;/span&gt;
+    &lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;groupBy&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;fact&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Fact&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;fact&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;subject&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;fact&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;property&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;// =&amp;gt; Grouped[Fact, (String, String)]
+&lt;/span&gt;    &lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;sortedReverseTake&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)(&lt;/span&gt;&lt;span class=&quot;nc&quot;&gt;AssertedAtOrdering&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;values&lt;/span&gt;
+    &lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;flatten&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+
+&lt;span class=&quot;k&quot;&gt;object&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;AssertedAtOrdering&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;extends&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Ordering&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;Fact&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;]&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;compare&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;Fact&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;b&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;Fact&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;asserted_at&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;compare&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;b&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;asserted_at&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;I won’t go into all the pieces of my whole pipeline, most of it isn’t all that
+interesting, but I do want to note that you can return more or less records from a pipe than came in. It doesn’t have to be a 1:1 tranformation.&lt;/p&gt;
+
+&lt;p&gt;For example, I needed both the date and the full datetime in my observation
+domain object.  This function does that for me by splitting the pipe in two
+with filters, sidelining the uninteresting half (&lt;code class=&quot;highlighter-rouge&quot;&gt;not_measurement_at_pipe&lt;/code&gt;),
+returning multiple values from the &lt;code class=&quot;highlighter-rouge&quot;&gt;measurement_at_pipe&lt;/code&gt;.  Finally the
+sidelined pipe can be merged back into the stream.&lt;/p&gt;
+
+&lt;div class=&quot;language-scala highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;k&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;createMeasurementDate&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;pipe&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;TypedPipe&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;Fact&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;])&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;TypedPipe&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;Fact&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;]&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;measurement_at_pipe&lt;/span&gt;     &lt;span class=&quot;k&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;pipe&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;filter&lt;/span&gt;    &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;fact&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Fact&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;fact&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;property&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;==&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;measurement_at&quot;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;not_measurement_at_pipe&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;pipe&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;filterNot&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;fact&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Fact&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;fact&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;property&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;==&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;measurement_at&quot;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;converted_pipe&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;measurement_at_pipe&lt;/span&gt;
+    &lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;flatMap&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;fact&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Fact&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&amp;gt;&lt;/span&gt;
+      &lt;span class=&quot;nc&quot;&gt;List&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;
+            &lt;span class=&quot;n&quot;&gt;fact&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt;
+            &lt;span class=&quot;n&quot;&gt;fact&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;copy&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;property&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;measurement_date&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt;
+                      &lt;span class=&quot;n&quot;&gt;value&lt;/span&gt;    &lt;span class=&quot;k&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;jString&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;fact&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;value&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;stringOr&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;0000-00-00&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;).&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;substring&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;yyyy-mm-dd&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;length&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)))&lt;/span&gt;
+          &lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+
+  &lt;span class=&quot;n&quot;&gt;converted_pipe&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;++&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;not_measurement_at_pipe&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h2 id=&quot;final-thoughts&quot;&gt;Final Thoughts&lt;/h2&gt;
+
+&lt;p&gt;I really like the Typed api for writing jobs.  The Scala compiler informs you
+of errors (which is a much faster testing cycle than waiting for Hadoop to run
+a compiled jar and fail at some point.  That makes it a 10 second response
+time, versus a 5 minute response time).&lt;/p&gt;
+
+&lt;p&gt;In addition, it’s so much easier to keep track of real classes and work on
+them, than trying to track sets of untyped, named fields.&lt;/p&gt;
+
+&lt;p&gt;So use the TypedApi, and let Scala do more of the work for you.&lt;/p&gt;</content><author><name>Chris Schneider</name></author><summary type="html">Quick Recap</summary></entry><entry><title type="html">Machines</title><link href="http://www.watchchrislearn.com/haskell/2014/04/03/machines.html" rel="alternate" type="text/html" title="Machines" /><published>2014-04-03T09:22:51-06:00</published><updated>2014-04-03T09:22:51-06:00</updated><id>http://www.watchchrislearn.com/haskell/2014/04/03/machines</id><content type="html" xml:base="http://www.watchchrislearn.com/haskell/2014/04/03/machines.html">&lt;p&gt;I gave a short talk at the local Haskell meetup yesterday about
+the library “Machines” by the ever-so-famous Edward Kmett.&lt;/p&gt;
+
+&lt;p&gt;This is a quick roundup of what I learned, and the resources
+I ran across.&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;&lt;a href=&quot;https://github.com/cschneid/machines-boulder-haskell&quot;&gt;Github Repo&lt;/a&gt; of my example code.&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;http://hackage.haskell.org/package/machines&quot;&gt;Hackage Page for Machines&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://github.com/ekmett/machines/&quot;&gt;Github for Machines&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://dl.dropboxusercontent.com/u/4588997/Machines.pdf&quot;&gt;Slide deck by Rúnar Óli Bjarnason&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://github.com/glguy/TwosGame&quot;&gt;glguy’s 2048 clone&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h2 id=&quot;counting-words&quot;&gt;Counting Words&lt;/h2&gt;
+
+&lt;p&gt;The initial task I gave myself to learn was to read an input line, and report
+how many words were in that line.&lt;/p&gt;
+
+&lt;p&gt;That consisted of 3 machines wired together in a pipeline. I only had to write a
+custom function for the worker in the middle. And even that was a one-liner.&lt;/p&gt;
+
+&lt;p&gt;The &lt;code class=&quot;highlighter-rouge&quot;&gt;auto&lt;/code&gt; function (and it’s &lt;code class=&quot;highlighter-rouge&quot;&gt;autoM&lt;/code&gt; friend) seem like the easiest way to create
+a simple mapper type machine that takes some input, does a bit of work, and spits out
+output.&lt;/p&gt;
+
+&lt;div class=&quot;language-haskell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;eachLineCount&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;::&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;IO&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;()&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;eachLineCount&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;runT_&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;$&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;repeatedly&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;yield&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&amp;lt;&amp;lt;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;liftIO&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;getLine&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+                     &lt;span class=&quot;o&quot;&gt;~&amp;gt;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;countWords&lt;/span&gt;
+                     &lt;span class=&quot;o&quot;&gt;~&amp;gt;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;autoM&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;print&lt;/span&gt;
+
+&lt;span class=&quot;n&quot;&gt;countWords&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;::&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Process&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;String&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Int&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;countWords&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;auto&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;length&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;.&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;splitOn&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot; &quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h2 id=&quot;teeing-two-inputs-together&quot;&gt;Teeing two inputs together&lt;/h2&gt;
+
+&lt;p&gt;The other big thing I tackled was the &lt;code class=&quot;highlighter-rouge&quot;&gt;Tee&lt;/code&gt; type.  It lets you read from one of
+two incoming streams of data, explicitly. For example, logically you can say:
+“Give me the next value off the left stream”&lt;/p&gt;
+
+&lt;p&gt;There’s another type of multi-input machine I didn’t dive into called &lt;code class=&quot;highlighter-rouge&quot;&gt;Wye&lt;/code&gt; that
+allows for a blind &lt;code class=&quot;highlighter-rouge&quot;&gt;await&lt;/code&gt; in the consuming end, and the left pipe will be read
+until its empty, and then the right pipe will be read (as opposed to explicitly
+asking for Left or Right on a Tee)&lt;/p&gt;
+
+&lt;p&gt;Actually building the Tee was relatively simple once I figured out the &lt;code class=&quot;highlighter-rouge&quot;&gt;tee&lt;/code&gt;
+function.  I have a commented out version at the bottom of the next snippet that
+manually assembled the Tee using &lt;code class=&quot;highlighter-rouge&quot;&gt;addL&lt;/code&gt; and &lt;code class=&quot;highlighter-rouge&quot;&gt;capR&lt;/code&gt;. It is equivalent to
+the much shorter &lt;code class=&quot;highlighter-rouge&quot;&gt;tee&lt;/code&gt; version.&lt;/p&gt;
+
+&lt;div class=&quot;language-haskell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;compareLineCounts&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;::&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;String&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;IO&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;()&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;compareLineCounts&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;fixedString&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;runT_&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;$&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;tee&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;repeated&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;fixedString&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;~&amp;gt;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;countWords&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;ioInput&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;~&amp;gt;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;countWords&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;mergeInput&lt;/span&gt;
+       &lt;span class=&quot;o&quot;&gt;~&amp;gt;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;compareWords&lt;/span&gt;
+       &lt;span class=&quot;o&quot;&gt;~&amp;gt;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;autoM&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;putStrLn&lt;/span&gt;
+
+&lt;span class=&quot;n&quot;&gt;ioInput&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;::&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;MonadIO&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;m&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;SourceT&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;m&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;String&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;ioInput&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;repeatedly&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;$&lt;/span&gt; &lt;span class=&quot;kr&quot;&gt;do&lt;/span&gt;
+                        &lt;span class=&quot;n&quot;&gt;liftIO&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;$&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;putStrLn&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;Enter your new line to compare: &quot;&lt;/span&gt;
+                        &lt;span class=&quot;n&quot;&gt;x&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;lt;-&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;liftIO&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;getLine&lt;/span&gt;
+                        &lt;span class=&quot;n&quot;&gt;yield&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;x&lt;/span&gt;
+
+&lt;span class=&quot;n&quot;&gt;mergeInput&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;::&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Tee&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;a&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;a&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;mergeInput&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;repeatedly&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;$&lt;/span&gt; &lt;span class=&quot;kr&quot;&gt;do&lt;/span&gt;
+              &lt;span class=&quot;n&quot;&gt;x&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;lt;-&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;awaits&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;L&lt;/span&gt;
+              &lt;span class=&quot;n&quot;&gt;y&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;lt;-&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;awaits&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;R&lt;/span&gt;
+              &lt;span class=&quot;n&quot;&gt;yield&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;x&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;y&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+
+&lt;span class=&quot;n&quot;&gt;compareWords&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;::&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;Ord&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Process&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;String&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;compareWords&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;repeatedly&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;$&lt;/span&gt; &lt;span class=&quot;kr&quot;&gt;do&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;x&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;y&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;lt;-&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;await&lt;/span&gt;
+                               &lt;span class=&quot;n&quot;&gt;yield&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;$&lt;/span&gt; &lt;span class=&quot;kr&quot;&gt;case&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;compare&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;x&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;y&lt;/span&gt; &lt;span class=&quot;kr&quot;&gt;of&lt;/span&gt;
+                                        &lt;span class=&quot;kt&quot;&gt;GT&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;Greater Than&quot;&lt;/span&gt;
+                                        &lt;span class=&quot;kt&quot;&gt;LT&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;Less Than&quot;&lt;/span&gt;
+                                        &lt;span class=&quot;kt&quot;&gt;EQ&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;Equal To&quot;&lt;/span&gt;
+
+&lt;span class=&quot;c1&quot;&gt;-- compareLineCounts :: String -&amp;gt; IO ()&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;-- compareLineCounts fixedString =&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;--   runT_ $ (capR (repeated fixedString ~&amp;gt; countWords) $&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;--            addL (ioInput              ~&amp;gt; countWords)&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;--            mergeInput)&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;--        ~&amp;gt; compareWords&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;--        ~&amp;gt; autoM putStrLn&lt;/span&gt;
+
+
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h2 id=&quot;thanks&quot;&gt;Thanks&lt;/h2&gt;
+
+&lt;p&gt;Many thanks are in order to &lt;a href=&quot;https://twitter.com/kmett&quot;&gt;@kmett&lt;/a&gt;,
+&lt;a href=&quot;https://twitter.com/yoeight&quot;&gt;@yoeight&lt;/a&gt;, &lt;a href=&quot;https://twitter.com/glguy&quot;&gt;@glguy&lt;/a&gt;,
+&lt;a href=&quot;https://twitter.com/cartazio&quot;&gt;@cartazio&lt;/a&gt;
+and everybody else I asked questions of, all of whom helped me immensely on IRC.&lt;/p&gt;</content><author><name>Chris Schneider</name></author><summary type="html">I gave a short talk at the local Haskell meetup yesterday about the library “Machines” by the ever-so-famous Edward Kmett.</summary></entry><entry><title type="html">Distilling the Newest Record with Scalding</title><link href="http://www.watchchrislearn.com/scala/scalding/hadoop/2014/03/09/distilling-the-newest-record-with-scalding.html" rel="alternate" type="text/html" title="Distilling the Newest Record with Scalding" /><published>2014-03-09T20:43:56-06:00</published><updated>2014-03-09T20:43:56-06:00</updated><id>http://www.watchchrislearn.com/scala/scalding/hadoop/2014/03/09/distilling-the-newest-record-with-scalding</id><content type="html" xml:base="http://www.watchchrislearn.com/scala/scalding/hadoop/2014/03/09/distilling-the-newest-record-with-scalding.html">&lt;h2 id=&quot;the-problem-statement&quot;&gt;The Problem Statement&lt;/h2&gt;
+
+&lt;h3 id=&quot;background&quot;&gt;Background&lt;/h3&gt;
+
+&lt;p&gt;At Comverge, we are building a new project based on the lambda architecture. One of the core aspects of the lambda architecture revolves around an immutable, always growing store of data.&lt;/p&gt;
+
+&lt;p&gt;We store this data as a series of &lt;strong&gt;facts&lt;/strong&gt;.  Each fact is a single statement about the state of the world at a given time.  For example, here is a set of facts generated when a new user signs up.&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;{ &quot;subject&quot; =&amp;gt; &quot;user:1&quot;, &quot;property&quot; =&amp;gt; &quot;username&quot;, &quot;value&quot; =&amp;gt; &quot;cschneid&quot;, &quot;asserted_at&quot; =&amp;gt; &quot;2014-03-01T06:00:00Z&quot; }
+{ &quot;subject&quot; =&amp;gt; &quot;user:1&quot;, &quot;property&quot; =&amp;gt; &quot;realname&quot;, &quot;value&quot; =&amp;gt; &quot;Chris&quot;, &quot;asserted_at&quot; =&amp;gt; &quot;2014-03-01T06:00:00Z&quot; }
+{ &quot;subject&quot; =&amp;gt; &quot;user:1&quot;, &quot;property&quot; =&amp;gt; &quot;password&quot;, &quot;value&quot; =&amp;gt; &quot;b4e7a69126ef83206b8db39fb78f2bdf&quot;, &quot;asserted_at&quot; =&amp;gt; &quot;2014-03-01T06:00:00Z&quot; }
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;It often takes a bunch of facts working in concert to build a consistent view of the world.&lt;/p&gt;
+
+&lt;p&gt;The real beauty of this approach is when new records come in, we can rewind time and still see what we knew at what point.&lt;/p&gt;
+
+&lt;p&gt;For example, if this user changes their username, we don’t change the old username record, but just record the new one, and let the timestamps tell us the current state of the user.&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;{ &quot;subject&quot; =&amp;gt; &quot;user:1&quot;, &quot;property&quot; =&amp;gt; &quot;username&quot;, &quot;value&quot; =&amp;gt; &quot;ChrisTheWizard&quot;, &quot;asserted_at&quot; =&amp;gt; &quot;2014-03-05T06:00:00Z&quot; }
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h3 id=&quot;actual-problem-statement&quot;&gt;Actual Problem Statement&lt;/h3&gt;
+
+&lt;p&gt;I want a map-reduce job to generate the newest state of everything in our system.  So in the background example, I would want a single record that contained:&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;{ &quot;subject&quot; =&amp;gt; &quot;user:1&quot;, &quot;username&quot; =&amp;gt; &quot;ChrisTheWizard&quot;, &quot;realname&quot; =&amp;gt; &quot;Chris&quot;, &quot;password&quot; =&amp;gt; &quot;b4e7a69126ef83206b8db39fb78f2bdf&quot;}
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;We’ve thrown away the older username fact, and rearranged the data.&lt;/p&gt;
+
+&lt;h2 id=&quot;scalding&quot;&gt;Scalding&lt;/h2&gt;
+
+&lt;p&gt;So I played around with hadoop in various forms, and ended up with Scalding as an environment to write map-reduce jobs in.&lt;/p&gt;
+
+&lt;p&gt;I’ll walk you through the code I ended up with, and where I’m still working to finish up.&lt;/p&gt;
+
+&lt;h3 id=&quot;a-few-imports&quot;&gt;A few imports&lt;/h3&gt;
+
+&lt;p&gt;We of course need scalding’s libraries, and our specific use cases need json parsing, and a mutable map for collecting up the final view of the data.&lt;/p&gt;
+
+&lt;div class=&quot;language-scala highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;k&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;nn&quot;&gt;com.twitter.scalding._&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;nn&quot;&gt;scala.util.parsing.json._&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;nn&quot;&gt;scala.collection.mutable&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h3 id=&quot;setup-input--output&quot;&gt;Setup Input &amp;amp; Output&lt;/h3&gt;
+
+&lt;p&gt;Next up is the top matter of the code, where we setup the input and output files and types.&lt;/p&gt;
+
+&lt;p&gt;The data we have is specifically stored in hadoop sequence files, where the key is the timestamp of when the data was written, and an encoded JSON structure of the fact.  We don’t care about the sequence file’s timestamp, so we just throw that away.&lt;/p&gt;
+
+&lt;p&gt;Similarly, the final output should be stored as JSON. The &lt;code class=&quot;highlighter-rouge&quot;&gt;JsonLine&lt;/code&gt; class makes that really easy, but is fairly inflexible.  It may be that I’ll need to write my own output class at some point.&lt;/p&gt;
+
+&lt;div class=&quot;language-scala highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;k&quot;&gt;class&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;ExtractJSON&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;args&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Args&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;extends&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Job&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;args&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;input&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;WritableSequenceFile&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;/advanced-apps/master-dataset/Facts.1394232008699&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;'sequenceFileKey,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;'factJSON)&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;output&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;JsonLine&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;/fact_data_output&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h3 id=&quot;json-parse&quot;&gt;JSON Parse&lt;/h3&gt;
+
+&lt;p&gt;&lt;strong&gt;Everything from here on out is a single pipeline.&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;We take the input file, and start reading from it. The first thing we need to do is deserialize the json (a single field of text as far as scalding is concerned) into the set of fields that we actually care about.  We use the built-in JSON parser in scala to do this work for us.&lt;/p&gt;
+
+&lt;p&gt;Notice that a new field that hasn’t been mentioned shows up too, indicating if the JSON parsed or not.  We will use that in the very next code snippet.&lt;/p&gt;
+
+&lt;div class=&quot;language-scala highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;  &lt;span class=&quot;n&quot;&gt;input&lt;/span&gt;
+    &lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;read&lt;/span&gt;
+
+    &lt;span class=&quot;c1&quot;&gt;// Parse the json of each fact. Extract out the 4 expected values.
+&lt;/span&gt;    &lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;map&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;((&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;'factJSON)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;'parse_status,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;'asserted_at,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;'subject,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;'property,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;'value)&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+      &lt;span class=&quot;n&quot;&gt;line&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;String&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+        &lt;span class=&quot;nc&quot;&gt;JSON&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;parseFull&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;line&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;match&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+          &lt;span class=&quot;k&quot;&gt;case&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Some&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;data&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Map&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;String&lt;/span&gt;, &lt;span class=&quot;kt&quot;&gt;Any&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;])&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;success&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt;
+                                                &lt;span class=&quot;n&quot;&gt;data&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;asserted_at&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;),&lt;/span&gt;
+                                                &lt;span class=&quot;n&quot;&gt;data&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;subject&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;),&lt;/span&gt;
+                                                &lt;span class=&quot;n&quot;&gt;data&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;property&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;),&lt;/span&gt;
+                                                &lt;span class=&quot;n&quot;&gt;data&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;value&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+                                              &lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+          &lt;span class=&quot;k&quot;&gt;case&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;None&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;failed&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+        &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+      &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+    &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h3 id=&quot;error-check-the-json-parse&quot;&gt;Error check the JSON parse&lt;/h3&gt;
+
+&lt;p&gt;The JSON parsing code always works, and lets a value through. But some of those values may have “failed” in the &lt;code class=&quot;highlighter-rouge&quot;&gt;parse_status&lt;/code&gt; field.  If they do, just stop parsing that whole tuple (ie, throw away that whole line of input).&lt;/p&gt;
+
+&lt;p&gt;After that’s done, we have no more use for that field, so throw it away to keep the dataset small as we continue to move through the input.&lt;/p&gt;
+
+&lt;div class=&quot;language-scala highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;    &lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;filter&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;'parse_status)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;status&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;String&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;status&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;!=&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;failed&quot;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+    &lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;discard&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;'parse_status)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h3 id=&quot;find-the-newest&quot;&gt;Find the newest&lt;/h3&gt;
+
+&lt;p&gt;Now our goal is to find only the newest version of a fact for each pair of subject / property.  Continuing the background example, this would be the newest username that we know.&lt;/p&gt;
+
+&lt;p&gt;We do a &lt;code class=&quot;highlighter-rouge&quot;&gt;groupBy&lt;/code&gt;, then sort the results based on the timestamp.  Then take the first one result of that sort. (the newest item). Scalding provides an all-in-one way to do that with &lt;code class=&quot;highlighter-rouge&quot;&gt;sortWithTake&lt;/code&gt;, so just use that.&lt;/p&gt;
+
+&lt;p&gt;The &lt;code class=&quot;highlighter-rouge&quot;&gt;_&lt;/code&gt; variable is a bit surprising to me. Mostly my ignorance of scala, it must be an implicit argument being passed into this anonymous function.  In any case, it represents the whole grouping of {subject / property}&lt;/p&gt;
+
+&lt;p&gt;The comparison function is tricky since my &lt;code class=&quot;highlighter-rouge&quot;&gt;value&lt;/code&gt; field is an &lt;code class=&quot;highlighter-rouge&quot;&gt;Any&lt;/code&gt;, which can’t be automatically sorted by the language.  So instead I give it an explicit rule to sort by (just use the timestamp, and ignore the value field).  But I do need the value to be included in that &lt;code class=&quot;highlighter-rouge&quot;&gt;sortWithTake&lt;/code&gt; so it comes out the other side of the funnel with the value I was looking for.&lt;/p&gt;
+
+&lt;p&gt;Once done, flatten out the temporary &lt;code class=&quot;highlighter-rouge&quot;&gt;items&lt;/code&gt; field that we stored that pair of &lt;code class=&quot;highlighter-rouge&quot;&gt;asserted_at, value&lt;/code&gt; into, and get rid of it.&lt;/p&gt;
+
+&lt;div class=&quot;language-scala highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;    &lt;span class=&quot;c1&quot;&gt;// Find the newest asserted at for each combo of subject &amp;amp; property
+&lt;/span&gt;    &lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;groupBy&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;'subject,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;'property)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+      &lt;span class=&quot;k&quot;&gt;_&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;sortWithTake&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[(&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;String&lt;/span&gt;, &lt;span class=&quot;kt&quot;&gt;Any&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)]((&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;'asserted_at,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;'value)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;'items &lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;case&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;((&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;asL&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;_&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;),&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;asR&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;_&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;))&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;asL&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;asR&lt;/span&gt;
+      &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+    &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+    &lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;flatten&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[(&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;String&lt;/span&gt;, &lt;span class=&quot;kt&quot;&gt;Any&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)]((&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;'items)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;'asserted_at,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;'value)&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;discard&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;'items)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h3 id=&quot;combine-the-many-facts&quot;&gt;Combine the many facts&lt;/h3&gt;
+
+&lt;p&gt;At this point, we now have all the newest facts, having removed any outdated ones during the sort.&lt;/p&gt;
+
+&lt;p&gt;So the job now is to combine many rows of facts about a subject into a single row that represents all of what we know about that subject.&lt;/p&gt;
+
+&lt;p&gt;Once again, we &lt;code class=&quot;highlighter-rouge&quot;&gt;groupBy&lt;/code&gt;, but this time just on subject.&lt;/p&gt;
+
+&lt;p&gt;Then we use &lt;code class=&quot;highlighter-rouge&quot;&gt;foldLeft&lt;/code&gt; to loop over each property/value pair that we get and save it into a mutable &lt;code class=&quot;highlighter-rouge&quot;&gt;Map&lt;/code&gt;.  I had a bit of fun here trying to figure out how the syntax for adding to a Map works. See the result below for how I did it (apparently there are 2 or 3 different ways).&lt;/p&gt;
+
+&lt;p&gt;The tuple that comes out of this step is {subject, properties(property/value, property/value…)}&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;    .groupBy('subject) {
+      _.foldLeft(('property, 'value) -&amp;gt; 'properties)(mutable.Map.empty[String,Any]) {
+        (properties: mutable.Map[String,Any], propAndVal: (String, Any)) =&amp;gt;
+        val (prop, value) = propAndVal
+        properties += prop -&amp;gt; value
+      }
+    }
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h3 id=&quot;finish-up&quot;&gt;Finish Up&lt;/h3&gt;
+
+&lt;p&gt;So now we have a tuple of data we want, lets serialize it back out to disk and close the class we were working inside of.&lt;/p&gt;
+
+&lt;div class=&quot;language-scala highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;    &lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;write&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;output&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h3 id=&quot;hopefully-that-helped&quot;&gt;Hopefully that helped!&lt;/h3&gt;
+
+&lt;p&gt;It took me about 2 days to get the whole stack there working right, and &lt;code class=&quot;highlighter-rouge&quot;&gt;posco&lt;/code&gt; on IRC was super helpful in getting me unstuck.&lt;/p&gt;
+
+&lt;h3 id=&quot;next-steps&quot;&gt;Next Steps&lt;/h3&gt;
+
+&lt;p&gt;I need to figure out the actual output format I want.  I think it includes streaming the output into Cassandra, rather than simple a JSON format on disk.  That will involve figuring out how to connect to Cassandra and do the insert. I’ll try to write a follow-up post about that.&lt;/p&gt;</content><author><name>Chris Schneider</name></author><summary type="html">The Problem Statement</summary></entry><entry><title type="html">$! threadsafety</title><link href="http://www.watchchrislearn.com/ruby/2013/12/10/exception-threadsafety.html" rel="alternate" type="text/html" title="$! threadsafety" /><published>2013-12-10T21:15:06-07:00</published><updated>2013-12-10T21:15:06-07:00</updated><id>http://www.watchchrislearn.com/ruby/2013/12/10/exception-threadsafety</id><content type="html" xml:base="http://www.watchchrislearn.com/ruby/2013/12/10/exception-threadsafety.html">&lt;p&gt;I was investigating the &lt;code class=&quot;highlighter-rouge&quot;&gt;$!&lt;/code&gt; variable in Ruby, specifically if it is truely a
+global variable the way the leading &lt;code class=&quot;highlighter-rouge&quot;&gt;$&lt;/code&gt; implies.&lt;/p&gt;
+
+&lt;p&gt;I made a quick test case, where I attempt to raise errors, then print out the
+message.  This should detect a race condition after a few attempts.&lt;/p&gt;
+
+&lt;div class=&quot;language-ruby highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;t1&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;Thread&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;new&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt;
+  &lt;span class=&quot;mi&quot;&gt;100000&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;times&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;begin&lt;/span&gt;
+      &lt;span class=&quot;k&quot;&gt;raise&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;T1 Error&quot;&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;rescue&lt;/span&gt;
+      &lt;span class=&quot;nb&quot;&gt;puts&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;T1 - &lt;/span&gt;&lt;span class=&quot;si&quot;&gt;#{&lt;/span&gt;&lt;span class=&quot;vg&quot;&gt;$!&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+
+&lt;span class=&quot;n&quot;&gt;t2&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;Thread&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;new&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt;
+  &lt;span class=&quot;mi&quot;&gt;100000&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;times&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;|&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;i&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;|&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;begin&lt;/span&gt;
+      &lt;span class=&quot;k&quot;&gt;raise&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;T2 Error&quot;&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;rescue&lt;/span&gt;
+      &lt;span class=&quot;nb&quot;&gt;puts&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;T2 - &lt;/span&gt;&lt;span class=&quot;si&quot;&gt;#{&lt;/span&gt;&lt;span class=&quot;vg&quot;&gt;$!&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+
+&lt;span class=&quot;n&quot;&gt;t1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;join&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;t2&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;join&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;But the worse that happens is the newline getting printed out of order:&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;$ ruby globals.rb | grep &quot;T1.*T2&quot;
+T1 - T1 ErrorT2 - T2 Error
+T1 - T1 ErrorT2 - T2 Error
+T1 - T1 ErrorT2 - T2 Error
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h3 id=&quot;result&quot;&gt;Result&lt;/h3&gt;
+
+&lt;p&gt;So the result of all this is that no, the &lt;code class=&quot;highlighter-rouge&quot;&gt;$!&lt;/code&gt; is not a real global, but instead
+thread-local (at least).&lt;/p&gt;
+
+&lt;p&gt;Hopefully I can go dig into the code to figure out what scope it really is.&lt;/p&gt;</content><author><name>Chris Schneider</name></author><summary type="html">I was investigating the $! variable in Ruby, specifically if it is truely a global variable the way the leading $ implies.</summary></entry><entry><title type="html">Working entirely in EitherT</title><link href="http://www.watchchrislearn.com/haskell/2013/12/01/working-entirely-in-eithert.html" rel="alternate" type="text/html" title="Working entirely in EitherT" /><published>2013-12-01T15:21:42-07:00</published><updated>2013-12-01T15:21:42-07:00</updated><id>http://www.watchchrislearn.com/haskell/2013/12/01/working-entirely-in-eithert</id><content type="html" xml:base="http://www.watchchrislearn.com/haskell/2013/12/01/working-entirely-in-eithert.html">&lt;p&gt;This is the last post in my series of stuff on the Either monad.&lt;/p&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;&lt;a href=&quot;/blog/2013/11/28/playing-with-the-either-monad/&quot;&gt;Playing with the Either Monad&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;/blog/2013/11/30/using-the-either-monad-inside-another-monad/&quot;&gt;Using the Either Monad Inside Another Monad&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;/blog/2013/11/30/eithert-inside-of-io/&quot;&gt;EitherT Inside of IO&lt;/a&gt;&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;It’s a smallish change to the code, where I get rid of a lot of the annoying
+casting code to go &lt;code class=&quot;highlighter-rouge&quot;&gt;Either -&amp;gt; EitherT&lt;/code&gt;, and instead just write everything in
+EitherT.&lt;/p&gt;
+
+&lt;p&gt;The biggest change was the type signature of my failure code.  See how I add
+the Monad constraint, and update the return value to be EitherT wrapped around
+whatever monad you have.&lt;/p&gt;
+
+&lt;p&gt;What’s cool about this is that it’ll work right for both IO, and every other
+monad we want to embed this &lt;code class=&quot;highlighter-rouge&quot;&gt;eitherFailure&lt;/code&gt; code into.  Which means that as a
+hypothetical application’s monad transformer stack builds up, it would be easy
+to just plug this code in and go.&lt;/p&gt;
+
+&lt;div class=&quot;language-haskell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;eitherFailure&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;::&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Monad&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;m&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Flag&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;String&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;EitherT&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;String&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;m&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;String&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;eitherFailure&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Pass&lt;/span&gt;  &lt;span class=&quot;n&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;right&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;$&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;-&amp;gt; Passed &quot;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;++&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;val&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;eitherFailure&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Error&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;left&lt;/span&gt;  &lt;span class=&quot;o&quot;&gt;$&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;-&amp;gt; Failed &quot;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;++&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;val&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;One other gotcha is that I had to change &lt;code class=&quot;highlighter-rouge&quot;&gt;Right&lt;/code&gt; to &lt;code class=&quot;highlighter-rouge&quot;&gt;right&lt;/code&gt;, which is a
+function that returns a hoisted version of the Either value. No biggie, just
+wouldn’t typecheck till I did.&lt;/p&gt;
+
+&lt;p&gt;If you read this code, you’ll see that the transformation from &lt;code class=&quot;highlighter-rouge&quot;&gt;Maybe&lt;/code&gt; to
+&lt;code class=&quot;highlighter-rouge&quot;&gt;MaybeT&lt;/code&gt; is very similar, right down to using &lt;code class=&quot;highlighter-rouge&quot;&gt;just&lt;/code&gt; and &lt;code class=&quot;highlighter-rouge&quot;&gt;nothing&lt;/code&gt; as
+functions, rather than the &lt;code class=&quot;highlighter-rouge&quot;&gt;Just&lt;/code&gt; and &lt;code class=&quot;highlighter-rouge&quot;&gt;Nothing&lt;/code&gt; data constructors.&lt;/p&gt;
+
+&lt;div class=&quot;language-haskell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;kr&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;nn&quot;&gt;Control.Error&lt;/span&gt;
+&lt;span class=&quot;kr&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;nn&quot;&gt;Control.Monad.Trans&lt;/span&gt;
+
+&lt;span class=&quot;c1&quot;&gt;-- A type for my example functions to pass or fail on.&lt;/span&gt;
+&lt;span class=&quot;kr&quot;&gt;data&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Flag&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Pass&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;|&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Error&lt;/span&gt;
+
+&lt;span class=&quot;n&quot;&gt;main&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;::&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;IO&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;()&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;main&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;kr&quot;&gt;do&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;putStrLn&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;Starting to do work:&quot;&lt;/span&gt;
+
+  &lt;span class=&quot;n&quot;&gt;result&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;lt;-&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;runEitherT&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;$&lt;/span&gt; &lt;span class=&quot;kr&quot;&gt;do&lt;/span&gt;
+      &lt;span class=&quot;n&quot;&gt;lift&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;$&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;putStrLn&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;Give me the first input please:&quot;&lt;/span&gt;
+      &lt;span class=&quot;n&quot;&gt;initialText&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;lt;-&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;lift&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;getLine&lt;/span&gt;
+      &lt;span class=&quot;n&quot;&gt;x&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;lt;-&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;eitherFailure&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Error&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;initialText&lt;/span&gt;
+
+      &lt;span class=&quot;n&quot;&gt;lift&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;$&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;putStrLn&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;Give me the second input please:&quot;&lt;/span&gt;
+      &lt;span class=&quot;n&quot;&gt;secondText&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;lt;-&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;lift&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;getLine&lt;/span&gt;
+      &lt;span class=&quot;n&quot;&gt;y&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;lt;-&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;eitherFailure&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Pass&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;secondText&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;++&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;x&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+
+      &lt;span class=&quot;n&quot;&gt;noteT&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;Failed the Maybe: &quot;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;++&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;y&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;$&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;maybeFailure&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Pass&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;y&lt;/span&gt;
+
+  &lt;span class=&quot;kr&quot;&gt;case&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;result&lt;/span&gt; &lt;span class=&quot;kr&quot;&gt;of&lt;/span&gt;
+    &lt;span class=&quot;kt&quot;&gt;Left&lt;/span&gt;  &lt;span class=&quot;n&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;putStrLn&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;$&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;Work Result: Failed&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;\n&lt;/span&gt;&lt;span class=&quot;s&quot;&gt; &quot;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;++&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;val&lt;/span&gt;
+    &lt;span class=&quot;kt&quot;&gt;Right&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;putStrLn&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;$&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;Work Result: Passed&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;\n&lt;/span&gt;&lt;span class=&quot;s&quot;&gt; &quot;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;++&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;val&lt;/span&gt;
+
+  &lt;span class=&quot;n&quot;&gt;putStrLn&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;Ok, finished. Have a nice day&quot;&lt;/span&gt;
+
+&lt;span class=&quot;n&quot;&gt;eitherFailure&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;::&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Monad&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;m&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Flag&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;String&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;EitherT&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;String&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;m&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;String&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;eitherFailure&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Pass&lt;/span&gt;  &lt;span class=&quot;n&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;right&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;$&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;-&amp;gt; Passed &quot;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;++&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;val&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;eitherFailure&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Error&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;left&lt;/span&gt;  &lt;span class=&quot;o&quot;&gt;$&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;-&amp;gt; Failed &quot;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;++&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;val&lt;/span&gt;
+
+&lt;span class=&quot;n&quot;&gt;maybeFailure&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;::&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Monad&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;m&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Flag&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;String&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;MaybeT&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;m&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;String&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;maybeFailure&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Pass&lt;/span&gt;  &lt;span class=&quot;n&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;just&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;$&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;-&amp;gt; Passed maybe &quot;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;++&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;val&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;maybeFailure&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Error&lt;/span&gt; &lt;span class=&quot;kr&quot;&gt;_&lt;/span&gt;   &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;nothing&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;</content><author><name>Chris Schneider</name></author><summary type="html">This is the last post in my series of stuff on the Either monad.</summary></entry><entry><title type="html">EitherT inside of IO</title><link href="http://www.watchchrislearn.com/haskell/2013/11/30/eithert-inside-of-io.html" rel="alternate" type="text/html" title="EitherT inside of IO" /><published>2013-11-30T14:46:12-07:00</published><updated>2013-11-30T14:46:12-07:00</updated><id>http://www.watchchrislearn.com/haskell/2013/11/30/eithert-inside-of-io</id><content type="html" xml:base="http://www.watchchrislearn.com/haskell/2013/11/30/eithert-inside-of-io.html">&lt;p&gt;Keeping with our series of posts about using the Either Monad in various ways:&lt;/p&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;&lt;a href=&quot;/blog/2013/11/28/playing-with-the-either-monad/&quot;&gt;Playing with the Either Monad&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;/blog/2013/11/30/using-the-either-monad-inside-another-monad/&quot;&gt;Using the Either Monad Inside Another Monad&lt;/a&gt;&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;This time, I expand from Either to EitherT, which allows us to interleave an
+outer monad with an inner one.&lt;/p&gt;
+
+&lt;p&gt;When we call &lt;code class=&quot;highlighter-rouge&quot;&gt;runEitherT&lt;/code&gt; with a &lt;code class=&quot;highlighter-rouge&quot;&gt;do&lt;/code&gt; block, we are making a new context, where
+we make an EitherT type, wrapped around an inner IO type.  I am not sure what
+the exact type there is, I’ll have to look into that later.&lt;/p&gt;
+
+&lt;p&gt;I import &lt;code class=&quot;highlighter-rouge&quot;&gt;Control.Monad.Trans&lt;/code&gt; to get access to the &lt;code class=&quot;highlighter-rouge&quot;&gt;lift&lt;/code&gt; function. That lets
+us go down a layer into that EitherT wrapped around the IO to run IO commands.&lt;/p&gt;
+
+&lt;p&gt;You can see how in the workflow of the EitherT section, it asks for some text,
+does some “work” that may fail, and then asks for the next bit of text to work
+on.&lt;/p&gt;
+
+&lt;p&gt;The coolest part is that if the first bit fails, it bails out of the whole
+workflow with the correct &lt;code class=&quot;highlighter-rouge&quot;&gt;Left&lt;/code&gt; value, not even asking for the second bit
+of input.&lt;/p&gt;
+
+&lt;p&gt;The only other gotcha is that &lt;code class=&quot;highlighter-rouge&quot;&gt;EitherT&lt;/code&gt; isn’t quite the same as a normal
+&lt;code class=&quot;highlighter-rouge&quot;&gt;Either&lt;/code&gt; type, so you have to use functions to convert between them.
+&lt;code class=&quot;highlighter-rouge&quot;&gt;hoistEither&lt;/code&gt; and &lt;code class=&quot;highlighter-rouge&quot;&gt;hoistMaybe&lt;/code&gt; take a normal version of &lt;code class=&quot;highlighter-rouge&quot;&gt;Either/Maybe&lt;/code&gt; and turn it
+into &lt;code class=&quot;highlighter-rouge&quot;&gt;EitherT/MaybeT&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;Similarly, we had to use &lt;code class=&quot;highlighter-rouge&quot;&gt;noteT&lt;/code&gt; instead of &lt;code class=&quot;highlighter-rouge&quot;&gt;note&lt;/code&gt;.  Same behavior, but it just
+works on the transformed versions of the types.&lt;/p&gt;
+
+&lt;div class=&quot;language-haskell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;kr&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;nn&quot;&gt;Control.Error&lt;/span&gt;
+&lt;span class=&quot;kr&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;nn&quot;&gt;Control.Monad.Trans&lt;/span&gt;
+
+&lt;span class=&quot;c1&quot;&gt;-- A type for my example functions to pass or fail on.&lt;/span&gt;
+&lt;span class=&quot;kr&quot;&gt;data&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Flag&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Pass&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;|&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Error&lt;/span&gt;
+
+&lt;span class=&quot;n&quot;&gt;main&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;::&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;IO&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;()&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;main&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;kr&quot;&gt;do&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;putStrLn&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;Starting to do work:&quot;&lt;/span&gt;
+
+  &lt;span class=&quot;n&quot;&gt;result&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;lt;-&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;runEitherT&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;$&lt;/span&gt; &lt;span class=&quot;kr&quot;&gt;do&lt;/span&gt;
+      &lt;span class=&quot;n&quot;&gt;lift&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;$&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;putStrLn&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;Give me the first input please:&quot;&lt;/span&gt;
+      &lt;span class=&quot;n&quot;&gt;initialText&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;lt;-&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;lift&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;getLine&lt;/span&gt;
+      &lt;span class=&quot;n&quot;&gt;x&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;lt;-&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;hoistEither&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;$&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;eitherFailure&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Error&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;initialText&lt;/span&gt;
+
+      &lt;span class=&quot;n&quot;&gt;lift&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;$&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;putStrLn&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;Give me the second input please:&quot;&lt;/span&gt;
+      &lt;span class=&quot;n&quot;&gt;secondText&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;lt;-&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;lift&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;getLine&lt;/span&gt;
+      &lt;span class=&quot;n&quot;&gt;y&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;lt;-&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;hoistEither&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;$&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;eitherFailure&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Pass&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;secondText&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;++&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;x&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+
+      &lt;span class=&quot;n&quot;&gt;noteT&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;Failed the Maybe: &quot;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;++&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;y&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;$&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;hoistMaybe&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;$&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;maybeFailure&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Pass&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;y&lt;/span&gt;
+
+  &lt;span class=&quot;kr&quot;&gt;case&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;result&lt;/span&gt; &lt;span class=&quot;kr&quot;&gt;of&lt;/span&gt;
+    &lt;span class=&quot;kt&quot;&gt;Left&lt;/span&gt;  &lt;span class=&quot;n&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;putStrLn&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;$&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;Work Result: Failed&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;\n&lt;/span&gt;&lt;span class=&quot;s&quot;&gt; &quot;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;++&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;val&lt;/span&gt;
+    &lt;span class=&quot;kt&quot;&gt;Right&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;putStrLn&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;$&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;Work Result: Passed&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;\n&lt;/span&gt;&lt;span class=&quot;s&quot;&gt; &quot;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;++&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;val&lt;/span&gt;
+
+  &lt;span class=&quot;n&quot;&gt;putStrLn&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;Ok, finished. Have a nice day&quot;&lt;/span&gt;
+
+&lt;span class=&quot;c1&quot;&gt;-- Simple function that we can use to force it to error out with a Left, or&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;-- pass with a Right value. It just includes some helper text as its content,&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;-- showing what happened.&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;eitherFailure&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;::&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Flag&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;String&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Either&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;String&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;String&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;eitherFailure&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Pass&lt;/span&gt;  &lt;span class=&quot;n&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Right&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;$&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;-&amp;gt; Passed &quot;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;++&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;val&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;eitherFailure&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Error&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Left&lt;/span&gt;  &lt;span class=&quot;o&quot;&gt;$&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;-&amp;gt; Failed &quot;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;++&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;val&lt;/span&gt;
+
+&lt;span class=&quot;c1&quot;&gt;-- Simlar to eitherFailure, but return a (Just String) or a Nothing based on&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;-- if we told it to fail.&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;maybeFailure&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;::&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Flag&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;String&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Maybe&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;String&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;maybeFailure&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Pass&lt;/span&gt;  &lt;span class=&quot;n&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Just&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;$&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;-&amp;gt; Passed maybe &quot;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;++&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;val&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;maybeFailure&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Error&lt;/span&gt; &lt;span class=&quot;kr&quot;&gt;_&lt;/span&gt;   &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Nothing&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;</content><author><name>Chris Schneider</name></author><summary type="html">Keeping with our series of posts about using the Either Monad in various ways:</summary></entry><entry><title type="html">Using the Either monad inside another monad</title><link href="http://www.watchchrislearn.com/haskell/2013/11/30/using-the-either-monad-inside-another-monad.html" rel="alternate" type="text/html" title="Using the Either monad inside another monad" /><published>2013-11-30T14:29:07-07:00</published><updated>2013-11-30T14:29:07-07:00</updated><id>http://www.watchchrislearn.com/haskell/2013/11/30/using-the-either-monad-inside-another-monad</id><content type="html" xml:base="http://www.watchchrislearn.com/haskell/2013/11/30/using-the-either-monad-inside-another-monad.html">&lt;p&gt;After yesterday’s post about the
+&lt;a href=&quot;/2013/11/28/playing-with-the-either-monad/&quot;&gt;Either Monad&lt;/a&gt;
+I wanted to see if it was easy to embed that bit of &lt;code class=&quot;highlighter-rouge&quot;&gt;doWork&lt;/code&gt; stuff right
+into the main function.&lt;/p&gt;
+
+&lt;p&gt;This was mostly about learning the syntax, I would suggest keeping stuff
+separate as much as possible in real code.&lt;/p&gt;
+
+&lt;p&gt;The biggest gotcha I found was that the indentation of the &lt;code class=&quot;highlighter-rouge&quot;&gt;x &amp;lt;-
+eitherFailure...&lt;/code&gt; bit needed to be deeper than the &lt;code class=&quot;highlighter-rouge&quot;&gt;r&lt;/code&gt; in the &lt;code class=&quot;highlighter-rouge&quot;&gt;result&lt;/code&gt; token.
+This ended up being more than my normal 2 space indent.&lt;/p&gt;
+
+&lt;div class=&quot;language-haskell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;kr&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;nn&quot;&gt;Control.Error&lt;/span&gt;
+
+&lt;span class=&quot;c1&quot;&gt;-- A type for my example functions to pass or fail on.&lt;/span&gt;
+&lt;span class=&quot;kr&quot;&gt;data&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Flag&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Pass&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;|&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Error&lt;/span&gt;
+
+&lt;span class=&quot;n&quot;&gt;main&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;::&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;IO&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;()&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;main&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;kr&quot;&gt;do&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;putStrLn&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;Starting to do work:&quot;&lt;/span&gt;
+
+  &lt;span class=&quot;c1&quot;&gt;-- The inner monad here is Either. But note that we have&lt;/span&gt;
+  &lt;span class=&quot;c1&quot;&gt;-- no IO ability inside of it.&lt;/span&gt;
+  &lt;span class=&quot;kr&quot;&gt;let&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;result&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;kr&quot;&gt;do&lt;/span&gt;
+      &lt;span class=&quot;n&quot;&gt;x&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;lt;-&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;eitherFailure&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Pass&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;Initial Thing&quot;&lt;/span&gt;
+      &lt;span class=&quot;n&quot;&gt;y&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;lt;-&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;eitherFailure&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Error&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;Second Thing &quot;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;++&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;x&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+      &lt;span class=&quot;n&quot;&gt;note&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;Failed the Maybe: &quot;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;++&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;y&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;$&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;maybeFailure&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Pass&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;y&lt;/span&gt;
+
+  &lt;span class=&quot;kr&quot;&gt;case&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;result&lt;/span&gt; &lt;span class=&quot;kr&quot;&gt;of&lt;/span&gt;
+    &lt;span class=&quot;kt&quot;&gt;Left&lt;/span&gt;  &lt;span class=&quot;n&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;putStrLn&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;$&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;Work Result: Failed&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;\n&lt;/span&gt;&lt;span class=&quot;s&quot;&gt; &quot;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;++&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;val&lt;/span&gt;
+    &lt;span class=&quot;kt&quot;&gt;Right&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;putStrLn&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;$&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;Work Result: Passed&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;\n&lt;/span&gt;&lt;span class=&quot;s&quot;&gt; &quot;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;++&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;val&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;putStrLn&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;Ok, finished. Have a nice day&quot;&lt;/span&gt;
+
+&lt;span class=&quot;c1&quot;&gt;-- Simple function that we can use to force it to error out with a Left, or&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;-- pass with a Right value. It just includes some helper text as its content,&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;-- showing what happened.&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;eitherFailure&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;::&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Flag&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;String&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Either&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;String&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;String&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;eitherFailure&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Pass&lt;/span&gt;  &lt;span class=&quot;n&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Right&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;$&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;-&amp;gt; Passed &quot;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;++&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;val&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;eitherFailure&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Error&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Left&lt;/span&gt;  &lt;span class=&quot;o&quot;&gt;$&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;-&amp;gt; Failed &quot;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;++&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;val&lt;/span&gt;
+
+&lt;span class=&quot;c1&quot;&gt;-- Simlar to eitherFailure, but return a (Just String) or a Nothing based on&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;-- if we told it to fail.&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;maybeFailure&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;::&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Flag&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;String&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Maybe&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;String&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;maybeFailure&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Pass&lt;/span&gt;  &lt;span class=&quot;n&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Just&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;$&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;-&amp;gt; Passed maybe &quot;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;++&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;val&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;maybeFailure&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Error&lt;/span&gt; &lt;span class=&quot;kr&quot;&gt;_&lt;/span&gt;   &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Nothing&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;You can see it’s the same code, except the &lt;code class=&quot;highlighter-rouge&quot;&gt;result&lt;/code&gt; in main is calculated
+directly there, rather than calling another function.&lt;/p&gt;
+
+&lt;p&gt;Note that this isn’t the transformer library, so you can’t be clever and do
+stuff like &lt;code class=&quot;highlighter-rouge&quot;&gt;lift&lt;/code&gt; and friends to do IO in that Either workflow.&lt;/p&gt;</content><author><name>Chris Schneider</name></author><summary type="html">After yesterday’s post about the Either Monad I wanted to see if it was easy to embed that bit of doWork stuff right into the main function.</summary></entry><entry><title type="html">Playing with the Either monad in Haskell</title><link href="http://www.watchchrislearn.com/haskell/2013/11/28/playing-with-the-either-monad.html" rel="alternate" type="text/html" title="Playing with the Either monad in Haskell" /><published>2013-11-28T22:50:09-07:00</published><updated>2013-11-28T22:50:09-07:00</updated><id>http://www.watchchrislearn.com/haskell/2013/11/28/playing-with-the-either-monad</id><content type="html" xml:base="http://www.watchchrislearn.com/haskell/2013/11/28/playing-with-the-either-monad.html">&lt;p&gt;After playing with the bitcoin price fetcher, I was disappointed at how… hard
+it was to deal with the multiple layers of potential errors.  I started looking
+into the &lt;code class=&quot;highlighter-rouge&quot;&gt;errors&lt;/code&gt; package on Hackage for a way out.  It is a one-stop-shop for
+all the standard error handling mechanisms in Haskell. It reexports the
+standard Either and Maybe types, and also adds many helper functions to move
+between Either and Maybe types, in addition to helping out with the various
+transformer versions of both (MaybeT and EitherT)&lt;/p&gt;
+
+&lt;p&gt;I will play with MaybeT and EitherT later, for now I’m happy to have figured out
+the Either monad, and want to share the annotated example I’ve cobbled together.&lt;/p&gt;
+
+&lt;p&gt;Grab the code into a file, &lt;code class=&quot;highlighter-rouge&quot;&gt;cabal install errors&lt;/code&gt;, and start toying with the
+various places I use the &lt;code class=&quot;highlighter-rouge&quot;&gt;Pass&lt;/code&gt; and &lt;code class=&quot;highlighter-rouge&quot;&gt;Error&lt;/code&gt; types in the &lt;code class=&quot;highlighter-rouge&quot;&gt;doWork&lt;/code&gt; function.
+You’ll see how nicely Haskell handles a long string of things, where any one of
+them could fail out.&lt;/p&gt;
+
+&lt;p&gt;I’ll have to go rewrite the bitcoin scraper with my newfound knowledge…&lt;/p&gt;
+
+&lt;div class=&quot;language-haskell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;kr&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;nn&quot;&gt;Control.Error&lt;/span&gt;
+
+&lt;span class=&quot;c1&quot;&gt;-- A type for my example functions to pass or fail on.&lt;/span&gt;
+&lt;span class=&quot;kr&quot;&gt;data&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Flag&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Pass&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;|&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Error&lt;/span&gt;
+
+&lt;span class=&quot;n&quot;&gt;main&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;::&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;IO&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;()&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;main&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;kr&quot;&gt;do&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;putStrLn&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;Starting to do work:&quot;&lt;/span&gt;
+  &lt;span class=&quot;kr&quot;&gt;let&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;result&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;doWork&lt;/span&gt;
+  &lt;span class=&quot;kr&quot;&gt;case&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;result&lt;/span&gt; &lt;span class=&quot;kr&quot;&gt;of&lt;/span&gt;
+    &lt;span class=&quot;kt&quot;&gt;Left&lt;/span&gt;  &lt;span class=&quot;n&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;putStrLn&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;$&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;Work Result: Failed&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;\n&lt;/span&gt;&lt;span class=&quot;s&quot;&gt; &quot;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;++&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;val&lt;/span&gt;
+    &lt;span class=&quot;kt&quot;&gt;Right&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;putStrLn&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;$&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;Work Result: Passed&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;\n&lt;/span&gt;&lt;span class=&quot;s&quot;&gt; &quot;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;++&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;val&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;putStrLn&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;Ok, finished. Have a nice day&quot;&lt;/span&gt;
+
+&lt;span class=&quot;c1&quot;&gt;-- This is a driver function, simulating an error prone path&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;-- through the app.  Each step could possibly error out, and&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;-- when any of them do, we want to just bail out.&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;--&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;-- Remember the definition of the Either monad is:&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;-- instance Monad (Either e) where&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;--   return = Right&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;--   Right m &amp;gt;&amp;gt;= k = k m&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;--   Left e  &amp;gt;&amp;gt;= _ = Left e&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;--&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;-- So a Left value short circuits the rest of the Monad, and a Right value&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;-- passes the value off to the next step.&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;doWork&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;::&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Either&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;String&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;String&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;doWork&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;kr&quot;&gt;do&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;-- use do notation syntax sugar for the Either monad&lt;/span&gt;
+
+    &lt;span class=&quot;c1&quot;&gt;-- First, do something that may or may not work. We get back a type of&lt;/span&gt;
+    &lt;span class=&quot;c1&quot;&gt;-- Either String String (since that's the type of the example&lt;/span&gt;
+    &lt;span class=&quot;c1&quot;&gt;-- eitherFailure function here)&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;x&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;lt;-&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;eitherFailure&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Pass&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;Initial Thing&quot;&lt;/span&gt;
+
+    &lt;span class=&quot;c1&quot;&gt;-- Based on what we get in x, just go ahead and attempt it.&lt;/span&gt;
+    &lt;span class=&quot;c1&quot;&gt;-- Note that the function eitherFailure takes a simple&lt;/span&gt;
+    &lt;span class=&quot;c1&quot;&gt;-- String as its argument.  So we didn't have to unwrap the&lt;/span&gt;
+    &lt;span class=&quot;c1&quot;&gt;-- first Either value.&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;y&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;lt;-&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;eitherFailure&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Error&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;Second Thing &quot;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;++&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;x&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+
+    &lt;span class=&quot;c1&quot;&gt;-- We can't just wire a Maybe value in the middle here,&lt;/span&gt;
+    &lt;span class=&quot;c1&quot;&gt;-- since it doesn't typecheck. (Maybe isn't an Either),&lt;/span&gt;
+    &lt;span class=&quot;c1&quot;&gt;-- even though they play similarly. If we just tried, we'd get:&lt;/span&gt;
+
+    &lt;span class=&quot;c1&quot;&gt;-- z &amp;lt;- maybeFailure Error&lt;/span&gt;
+    &lt;span class=&quot;c1&quot;&gt;-- Couldn't match type `Maybe' with `Either String'&lt;/span&gt;
+
+    &lt;span class=&quot;c1&quot;&gt;-- But instead, we can use Control.Error.Util.note to convert&lt;/span&gt;
+    &lt;span class=&quot;c1&quot;&gt;-- an &quot;empty&quot; Nothing value into a Left value with a descriptive&lt;/span&gt;
+    &lt;span class=&quot;c1&quot;&gt;-- error.  So now we'd get a proper Either value we can chain&lt;/span&gt;
+    &lt;span class=&quot;c1&quot;&gt;-- into this overall monad.&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;note&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;Failed the Maybe: &quot;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;++&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;y&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;$&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;maybeFailure&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Pass&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;y&lt;/span&gt;
+
+    &lt;span class=&quot;c1&quot;&gt;-- Since the last line of this `do` block is the type we plan on&lt;/span&gt;
+    &lt;span class=&quot;c1&quot;&gt;-- returning, there's no `return` call needed.&lt;/span&gt;
+
+
+&lt;span class=&quot;c1&quot;&gt;-- Simple function that we can use to force it to error out with a Left, or&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;-- pass with a Right value. It just includes some helper text as its content,&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;-- showing what happened.&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;eitherFailure&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;::&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Flag&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;String&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Either&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;String&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;String&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;eitherFailure&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Pass&lt;/span&gt;  &lt;span class=&quot;n&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Right&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;$&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;-&amp;gt; Passed &quot;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;++&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;val&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;eitherFailure&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Error&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Left&lt;/span&gt;  &lt;span class=&quot;o&quot;&gt;$&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;-&amp;gt; Failed &quot;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;++&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;val&lt;/span&gt;
+
+&lt;span class=&quot;c1&quot;&gt;-- Simlar to eitherFailure, but return a (Just String) or a Nothing based on&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;-- if we told it to fail.&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;maybeFailure&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;::&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Flag&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;String&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Maybe&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;String&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;maybeFailure&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Pass&lt;/span&gt;  &lt;span class=&quot;n&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Just&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;$&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;-&amp;gt; Passed maybe &quot;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;++&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;val&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;maybeFailure&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Error&lt;/span&gt; &lt;span class=&quot;kr&quot;&gt;_&lt;/span&gt;   &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Nothing&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;My favorite part of diving into the error library is that my worry from yesterday,
+&lt;code class=&quot;highlighter-rouge&quot;&gt;except then I’d have to switch the Maybe result out of Lens-Aeson into a “fuller” Either type.&lt;/code&gt; is just the &lt;code class=&quot;highlighter-rouge&quot;&gt;note&lt;/code&gt; function I demoed above.&lt;/p&gt;</content><author><name>Chris Schneider</name></author><summary type="html">After playing with the bitcoin price fetcher, I was disappointed at how… hard it was to deal with the multiple layers of potential errors. I started looking into the errors package on Hackage for a way out. It is a one-stop-shop for all the standard error handling mechanisms in Haskell. It reexports the standard Either and Maybe types, and also adds many helper functions to move between Either and Maybe types, in addition to helping out with the various transformer versions of both (MaybeT and EitherT)</summary></entry></feed>

@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>
+    
+      Machines &middot; Watch Chris Learn
+    
+  </title>
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Libre+Baskerville:400,400i,700">
+</head>
+
+  <body>
+      <nav class="nav">
+    <div class="nav-container">
+      <a href="/">
+        <h2 class="nav-title">Watch Chris Learn</h2>
+      </a>
+      <ul>
+        <li><a href="/about">About</a></li>
+        <li><a href="/">Posts</a></li>
+      </ul>
+  </div>
+</nav>
+
+
+
+    <main>
+      <div class="post">
+  <div class="post-info">
+    <span>Written by</span>
+    
+        Chris Schneider
+    
+
+    
+      <br>
+      <span>on&nbsp;</span><time datetime="2014-04-03 09:22:51 -0600">April 03, 2014</time>
+    
+  </div>
+
+  <h1 class="post-title">Machines</h1>
+  <div class="post-line"></div>
+
+  <p>I gave a short talk at the local Haskell meetup yesterday about
+the library “Machines” by the ever-so-famous Edward Kmett.</p>
+
+<p>This is a quick roundup of what I learned, and the resources
+I ran across.</p>
+
+<ul>
+  <li><a href="https://github.com/cschneid/machines-boulder-haskell">Github Repo</a> of my example code.</li>
+  <li><a href="http://hackage.haskell.org/package/machines">Hackage Page for Machines</a></li>
+  <li><a href="https://github.com/ekmett/machines/">Github for Machines</a></li>
+  <li><a href="https://dl.dropboxusercontent.com/u/4588997/Machines.pdf">Slide deck by Rúnar Óli Bjarnason</a></li>
+  <li><a href="https://github.com/glguy/TwosGame">glguy’s 2048 clone</a></li>
+</ul>
+
+<h2 id="counting-words">Counting Words</h2>
+
+<p>The initial task I gave myself to learn was to read an input line, and report
+how many words were in that line.</p>
+
+<p>That consisted of 3 machines wired together in a pipeline. I only had to write a
+custom function for the worker in the middle. And even that was a one-liner.</p>
+
+<p>The <code class="highlighter-rouge">auto</code> function (and it’s <code class="highlighter-rouge">autoM</code> friend) seem like the easiest way to create
+a simple mapper type machine that takes some input, does a bit of work, and spits out
+output.</p>
+
+<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">eachLineCount</span> <span class="o">::</span> <span class="kt">IO</span> <span class="nb">()</span>
+<span class="n">eachLineCount</span> <span class="o">=</span> <span class="n">runT_</span> <span class="o">$</span> <span class="n">repeatedly</span> <span class="p">(</span><span class="n">yield</span> <span class="o">=&lt;&lt;</span> <span class="n">liftIO</span> <span class="n">getLine</span><span class="p">)</span>
+                     <span class="o">~&gt;</span> <span class="n">countWords</span>
+                     <span class="o">~&gt;</span> <span class="n">autoM</span> <span class="n">print</span>
+
+<span class="n">countWords</span> <span class="o">::</span> <span class="kt">Process</span> <span class="kt">String</span> <span class="kt">Int</span>
+<span class="n">countWords</span> <span class="o">=</span> <span class="n">auto</span> <span class="p">(</span><span class="n">length</span> <span class="o">.</span> <span class="n">splitOn</span> <span class="s">" "</span><span class="p">)</span>
+</code></pre></div></div>
+
+<h2 id="teeing-two-inputs-together">Teeing two inputs together</h2>
+
+<p>The other big thing I tackled was the <code class="highlighter-rouge">Tee</code> type.  It lets you read from one of
+two incoming streams of data, explicitly. For example, logically you can say:
+“Give me the next value off the left stream”</p>
+
+<p>There’s another type of multi-input machine I didn’t dive into called <code class="highlighter-rouge">Wye</code> that
+allows for a blind <code class="highlighter-rouge">await</code> in the consuming end, and the left pipe will be read
+until its empty, and then the right pipe will be read (as opposed to explicitly
+asking for Left or Right on a Tee)</p>
+
+<p>Actually building the Tee was relatively simple once I figured out the <code class="highlighter-rouge">tee</code>
+function.  I have a commented out version at the bottom of the next snippet that
+manually assembled the Tee using <code class="highlighter-rouge">addL</code> and <code class="highlighter-rouge">capR</code>. It is equivalent to
+the much shorter <code class="highlighter-rouge">tee</code> version.</p>
+
+<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">compareLineCounts</span> <span class="o">::</span> <span class="kt">String</span> <span class="o">-&gt;</span> <span class="kt">IO</span> <span class="nb">()</span>
+<span class="n">compareLineCounts</span> <span class="n">fixedString</span> <span class="o">=</span>
+  <span class="n">runT_</span> <span class="o">$</span> <span class="n">tee</span> <span class="p">(</span><span class="n">repeated</span> <span class="n">fixedString</span> <span class="o">~&gt;</span> <span class="n">countWords</span><span class="p">)</span> <span class="p">(</span><span class="n">ioInput</span> <span class="o">~&gt;</span> <span class="n">countWords</span><span class="p">)</span> <span class="n">mergeInput</span>
+       <span class="o">~&gt;</span> <span class="n">compareWords</span>
+       <span class="o">~&gt;</span> <span class="n">autoM</span> <span class="n">putStrLn</span>
+
+<span class="n">ioInput</span> <span class="o">::</span> <span class="p">(</span><span class="kt">MonadIO</span> <span class="n">m</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="kt">SourceT</span> <span class="n">m</span> <span class="kt">String</span>
+<span class="n">ioInput</span> <span class="o">=</span> <span class="n">repeatedly</span> <span class="o">$</span> <span class="kr">do</span>
+                        <span class="n">liftIO</span> <span class="o">$</span> <span class="n">putStrLn</span> <span class="s">"Enter your new line to compare: "</span>
+                        <span class="n">x</span> <span class="o">&lt;-</span> <span class="n">liftIO</span> <span class="n">getLine</span>
+                        <span class="n">yield</span> <span class="n">x</span>
+
+<span class="n">mergeInput</span> <span class="o">::</span> <span class="kt">Tee</span> <span class="n">a</span> <span class="n">a</span> <span class="p">(</span><span class="n">a</span><span class="p">,</span><span class="n">a</span><span class="p">)</span>
+<span class="n">mergeInput</span> <span class="o">=</span> <span class="n">repeatedly</span> <span class="o">$</span> <span class="kr">do</span>
+              <span class="n">x</span> <span class="o">&lt;-</span> <span class="n">awaits</span> <span class="kt">L</span>
+              <span class="n">y</span> <span class="o">&lt;-</span> <span class="n">awaits</span> <span class="kt">R</span>
+              <span class="n">yield</span> <span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+
+<span class="n">compareWords</span> <span class="o">::</span> <span class="p">(</span><span class="kt">Ord</span> <span class="n">a</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="kt">Process</span> <span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">a</span><span class="p">)</span> <span class="kt">String</span>
+<span class="n">compareWords</span> <span class="o">=</span> <span class="n">repeatedly</span> <span class="o">$</span> <span class="kr">do</span> <span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">)</span> <span class="o">&lt;-</span> <span class="n">await</span>
+                               <span class="n">yield</span> <span class="o">$</span> <span class="kr">case</span> <span class="n">compare</span> <span class="n">x</span> <span class="n">y</span> <span class="kr">of</span>
+                                        <span class="kt">GT</span> <span class="o">-&gt;</span> <span class="s">"Greater Than"</span>
+                                        <span class="kt">LT</span> <span class="o">-&gt;</span> <span class="s">"Less Than"</span>
+                                        <span class="kt">EQ</span> <span class="o">-&gt;</span> <span class="s">"Equal To"</span>
+
+<span class="c1">-- compareLineCounts :: String -&gt; IO ()</span>
+<span class="c1">-- compareLineCounts fixedString =</span>
+<span class="c1">--   runT_ $ (capR (repeated fixedString ~&gt; countWords) $</span>
+<span class="c1">--            addL (ioInput              ~&gt; countWords)</span>
+<span class="c1">--            mergeInput)</span>
+<span class="c1">--        ~&gt; compareWords</span>
+<span class="c1">--        ~&gt; autoM putStrLn</span>
+
+
+</code></pre></div></div>
+
+<h2 id="thanks">Thanks</h2>
+
+<p>Many thanks are in order to <a href="https://twitter.com/kmett">@kmett</a>,
+<a href="https://twitter.com/yoeight">@yoeight</a>, <a href="https://twitter.com/glguy">@glguy</a>,
+<a href="https://twitter.com/cartazio">@cartazio</a>
+and everybody else I asked questions of, all of whom helped me immensely on IRC.</p>
+
+
+</div>
+
+<div class="pagination">
+  
+    <a href="/scala/scalding/hadoop/2014/05/23/typed-scalding-pipes.html" class="left arrow">&#8592;</a>
+  
+  
+    <a href="/scala/scalding/hadoop/2014/03/09/distilling-the-newest-record-with-scalding.html" class="right arrow">&#8594;</a>
+  
+
+  <a href="#" class="top">Top</a>
+</div>
+
+    </main>
+
+    <footer>
+  <span>
+    &copy; <time datetime="2017-11-22 21:55:23 -0700">2017</time> . Made with Jekyll using the <a href="https://github.com/chesterhow/tale/">Tale</a> theme.
+  </span>
+</footer>
+
+  </body>
+</html>
