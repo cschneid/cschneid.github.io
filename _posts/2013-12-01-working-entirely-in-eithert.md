@@ -10,9 +10,9 @@ categories:
 
 This is the last post in my series of stuff on the Either monad.
 
-1. [Playing with the Either Monad](/blog/2013/11/28/playing-with-the-either-monad/)
-2. [Using the Either Monad Inside Another Monad](/blog/2013/11/30/using-the-either-monad-inside-another-monad/)
-3. [EitherT Inside of IO](/blog/2013/11/30/eithert-inside-of-io/)
+1. [Playing with the Either Monad]({% post_url 2013-11-28-playing-with-the-either-monad %})
+2. [Using the Either Monad Inside Another Monad]({% post_url 2013-11-30-using-the-either-monad-inside-another-monad %})
+3. [EitherT Inside of IO]({% post_url 2013-11-30-eithert-inside-of-io %})
 
 It's a smallish change to the code, where I get rid of a lot of the annoying
 casting code to go `Either -> EitherT`, and instead just write everything in

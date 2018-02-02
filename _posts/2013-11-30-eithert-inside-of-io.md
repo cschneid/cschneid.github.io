@@ -10,8 +10,8 @@ categories:
 
 Keeping with our series of posts about using the Either Monad in various ways:
 
-1. [Playing with the Either Monad](/blog/2013/11/28/playing-with-the-either-monad/)
-2. [Using the Either Monad Inside Another Monad](/blog/2013/11/30/using-the-either-monad-inside-another-monad/)
+1. [Playing with the Either Monad]({% post_url 2013-11-28-playing-with-the-either-monad %})
+2. [Using the Either Monad Inside Another Monad]({% post_url 2013-11-30-using-the-either-monad-inside-another-monad %})
 
 This time, I expand from Either to EitherT, which allows us to interleave an
 outer monad with an inner one.

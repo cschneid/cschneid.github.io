@@ -9,7 +9,7 @@ categories:
 ---
 
 After yesterday's post about the
-[Either Monad](/2013/11/28/playing-with-the-either-monad/)
+[Either Monad]({% post_url 2013-11-28-playing-with-the-either-monad %})
 I wanted to see if it was easy to embed that bit of `doWork` stuff right
 into the main function.
 

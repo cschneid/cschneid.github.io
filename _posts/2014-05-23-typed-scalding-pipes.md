@@ -14,7 +14,7 @@ Quick Recap
 ===========
 
 A while back I described a Hadoop job that I implemented with Scalding
-([Distilling the Newest Record with Scalding](http://watchchrislearn.com/blog/2014/03/09/distilling-the-newest-record-with-scalding/)).
+([Distilling the Newest Record with Scalding]({% post_url 2014-03-09-distilling-the-newest-record-with-scalding %})).
 To recap, the goal was to take a huge list of "facts", each containing a single
 timestamped fact about a large piece of system data.  The goal is to get a
 recombined version of a domain object at a given time.
