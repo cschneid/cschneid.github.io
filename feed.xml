@@ -1,4 +1,47 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.6.2">Jekyll</generator><link href="http://www.watchchrislearn.com/feed.xml" rel="self" type="application/atom+xml" /><link href="http://www.watchchrislearn.com/" rel="alternate" type="text/html" /><updated>2019-06-23T22:15:52-06:00</updated><id>http://www.watchchrislearn.com/</id><title type="html">Watch Chris Learn</title><subtitle>Things I learn while programming.</subtitle><entry><title type="html">Pretty Printing a Tree with Text.PrettyPrint</title><link href="http://www.watchchrislearn.com/haskell/2015/01/20/pretty-printing-a-tree-with-text-dot-prettyprint.html" rel="alternate" type="text/html" title="Pretty Printing a Tree with Text.PrettyPrint" /><published>2015-01-19T20:40:25-07:00</published><updated>2015-01-19T20:40:25-07:00</updated><id>http://www.watchchrislearn.com/haskell/2015/01/20/pretty-printing-a-tree-with-text-dot-prettyprint</id><content type="html" xml:base="http://www.watchchrislearn.com/haskell/2015/01/20/pretty-printing-a-tree-with-text-dot-prettyprint.html">&lt;p&gt;I looked into Haskell’s
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.6.2">Jekyll</generator><link href="http://www.watchchrislearn.com/feed.xml" rel="self" type="application/atom+xml" /><link href="http://www.watchchrislearn.com/" rel="alternate" type="text/html" /><updated>2019-06-23T22:17:27-06:00</updated><id>http://www.watchchrislearn.com/</id><title type="html">Watch Chris Learn</title><subtitle>Things I learn while programming.</subtitle><entry><title type="html">Checking EE Bonds with Google Sheets</title><link href="http://www.watchchrislearn.com/hacks/2019/06/23/checking-ee-bonds-with-google-sheets.html" rel="alternate" type="text/html" title="Checking EE Bonds with Google Sheets" /><published>2019-06-23T14:40:25-06:00</published><updated>2019-06-23T14:40:25-06:00</updated><id>http://www.watchchrislearn.com/hacks/2019/06/23/checking-ee-bonds-with-google-sheets</id><content type="html" xml:base="http://www.watchchrislearn.com/hacks/2019/06/23/checking-ee-bonds-with-google-sheets.html">&lt;p&gt;I had a stack of old and untracked old United States EE Treasury bonds. It was
+finally time to check them.&lt;/p&gt;
+
+&lt;p&gt;After typing in the Serial Number, Issue Date, and Face Value into Google
+Sheets, I wanted to fetch the rest of the interesting data from the official
+&lt;a href=&quot;https://www.treasurydirect.gov/BC/SBCPrice&quot;&gt;Treasury site&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;It took me a bit to figure out the right spreadsheet formula, so I figured I’d
+write it here if anybody else was looking.&lt;/p&gt;
+
+&lt;p&gt;Manually fill out the data:&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;A column: Serial Number&lt;/li&gt;
+  &lt;li&gt;B column: Date Issued&lt;/li&gt;
+  &lt;li&gt;C column: Face Value&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;=QUERY(ImportHtml(&quot;https://www.treasurydirect.gov/BC/SBCPrice?RedemptionDate=06%2F2019&amp;amp;Series=EE&amp;amp;Denomination=&quot; &amp;amp; ENCODEURL(C2) &amp;amp; &quot;&amp;amp;SerialNumber=&quot; &amp;amp; A2 &amp;amp; &quot;&amp;amp;IssueDate=&quot; &amp;amp; ENCODEURL(B2) &amp;amp; &quot;&amp;amp;btnAdd.x=CALCULATE&amp;amp;OldRedemptionDate=782&amp;amp;ViewPos=1&quot;,&quot;table&quot;,4),&quot;offset 1&quot;,0)
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;I put this in column E, and the values will be:&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;E: Serial Number again&lt;/li&gt;
+  &lt;li&gt;F: Type (“EE”)&lt;/li&gt;
+  &lt;li&gt;G: Face Value&lt;/li&gt;
+  &lt;li&gt;H: Issue Date&lt;/li&gt;
+  &lt;li&gt;I: Next Accrual&lt;/li&gt;
+  &lt;li&gt;J: Final Maturity&lt;/li&gt;
+  &lt;li&gt;K: Purchase Price&lt;/li&gt;
+  &lt;li&gt;L: Total Interest&lt;/li&gt;
+  &lt;li&gt;M: Interest Rate&lt;/li&gt;
+  &lt;li&gt;N: Total Current Value&lt;/li&gt;
+  &lt;li&gt;O: Note Codes (“MA” == Matured)&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;Then to fix up the total current value column, I had one more I put in R:&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;=value(regexreplace(N2,&quot;(\$|\*)&quot;,&quot;&quot;))
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;This converts the string value with the asterisk and dollar sign over to be a
+proper number that Google Sheets can do math on.&lt;/p&gt;</content><author><name>Chris Schneider</name></author><summary type="html">I had a stack of old and untracked old United States EE Treasury bonds. It was finally time to check them.</summary></entry><entry><title type="html">Pretty Printing a Tree with Text.PrettyPrint</title><link href="http://www.watchchrislearn.com/haskell/2015/01/20/pretty-printing-a-tree-with-text-dot-prettyprint.html" rel="alternate" type="text/html" title="Pretty Printing a Tree with Text.PrettyPrint" /><published>2015-01-19T20:40:25-07:00</published><updated>2015-01-19T20:40:25-07:00</updated><id>http://www.watchchrislearn.com/haskell/2015/01/20/pretty-printing-a-tree-with-text-dot-prettyprint</id><content type="html" xml:base="http://www.watchchrislearn.com/haskell/2015/01/20/pretty-printing-a-tree-with-text-dot-prettyprint.html">&lt;p&gt;I looked into Haskell’s
 &lt;a href=&quot;http://hackage.haskell.org/package/pretty&quot;&gt;pretty package&lt;/a&gt;
 (and the &lt;a href=&quot;http://hackage.haskell.org/package/prettyclass&quot;&gt;prettyclass package&lt;/a&gt;)
 to print out a simple tree structure I defined.
@@ -793,94 +836,4 @@ This ended up being more than my normal 2 space indent.&lt;/p&gt;
 directly there, rather than calling another function.&lt;/p&gt;
 
 &lt;p&gt;Note that this isn’t the transformer library, so you can’t be clever and do
-stuff like &lt;code class=&quot;highlighter-rouge&quot;&gt;lift&lt;/code&gt; and friends to do IO in that Either workflow.&lt;/p&gt;</content><author><name>Chris Schneider</name></author><summary type="html">After yesterday’s post about the Either Monad I wanted to see if it was easy to embed that bit of doWork stuff right into the main function.</summary></entry><entry><title type="html">Playing with the Either monad in Haskell</title><link href="http://www.watchchrislearn.com/haskell/2013/11/28/playing-with-the-either-monad.html" rel="alternate" type="text/html" title="Playing with the Either monad in Haskell" /><published>2013-11-28T22:50:09-07:00</published><updated>2013-11-28T22:50:09-07:00</updated><id>http://www.watchchrislearn.com/haskell/2013/11/28/playing-with-the-either-monad</id><content type="html" xml:base="http://www.watchchrislearn.com/haskell/2013/11/28/playing-with-the-either-monad.html">&lt;p&gt;After playing with the bitcoin price fetcher, I was disappointed at how… hard
-it was to deal with the multiple layers of potential errors.  I started looking
-into the &lt;code class=&quot;highlighter-rouge&quot;&gt;errors&lt;/code&gt; package on Hackage for a way out.  It is a one-stop-shop for
-all the standard error handling mechanisms in Haskell. It reexports the
-standard Either and Maybe types, and also adds many helper functions to move
-between Either and Maybe types, in addition to helping out with the various
-transformer versions of both (MaybeT and EitherT)&lt;/p&gt;
-
-&lt;p&gt;I will play with MaybeT and EitherT later, for now I’m happy to have figured out
-the Either monad, and want to share the annotated example I’ve cobbled together.&lt;/p&gt;
-
-&lt;p&gt;Grab the code into a file, &lt;code class=&quot;highlighter-rouge&quot;&gt;cabal install errors&lt;/code&gt;, and start toying with the
-various places I use the &lt;code class=&quot;highlighter-rouge&quot;&gt;Pass&lt;/code&gt; and &lt;code class=&quot;highlighter-rouge&quot;&gt;Error&lt;/code&gt; types in the &lt;code class=&quot;highlighter-rouge&quot;&gt;doWork&lt;/code&gt; function.
-You’ll see how nicely Haskell handles a long string of things, where any one of
-them could fail out.&lt;/p&gt;
-
-&lt;p&gt;I’ll have to go rewrite the bitcoin scraper with my newfound knowledge…&lt;/p&gt;
-
-&lt;div class=&quot;language-haskell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;kr&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;nn&quot;&gt;Control.Error&lt;/span&gt;
-
-&lt;span class=&quot;c1&quot;&gt;-- A type for my example functions to pass or fail on.&lt;/span&gt;
-&lt;span class=&quot;kr&quot;&gt;data&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Flag&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Pass&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;|&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Error&lt;/span&gt;
-
-&lt;span class=&quot;n&quot;&gt;main&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;::&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;IO&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;()&lt;/span&gt;
-&lt;span class=&quot;n&quot;&gt;main&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;kr&quot;&gt;do&lt;/span&gt;
-  &lt;span class=&quot;n&quot;&gt;putStrLn&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;Starting to do work:&quot;&lt;/span&gt;
-  &lt;span class=&quot;kr&quot;&gt;let&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;result&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;doWork&lt;/span&gt;
-  &lt;span class=&quot;kr&quot;&gt;case&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;result&lt;/span&gt; &lt;span class=&quot;kr&quot;&gt;of&lt;/span&gt;
-    &lt;span class=&quot;kt&quot;&gt;Left&lt;/span&gt;  &lt;span class=&quot;n&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;putStrLn&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;$&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;Work Result: Failed&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;\n&lt;/span&gt;&lt;span class=&quot;s&quot;&gt; &quot;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;++&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;val&lt;/span&gt;
-    &lt;span class=&quot;kt&quot;&gt;Right&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;putStrLn&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;$&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;Work Result: Passed&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;\n&lt;/span&gt;&lt;span class=&quot;s&quot;&gt; &quot;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;++&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;val&lt;/span&gt;
-  &lt;span class=&quot;n&quot;&gt;putStrLn&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;Ok, finished. Have a nice day&quot;&lt;/span&gt;
-
-&lt;span class=&quot;c1&quot;&gt;-- This is a driver function, simulating an error prone path&lt;/span&gt;
-&lt;span class=&quot;c1&quot;&gt;-- through the app.  Each step could possibly error out, and&lt;/span&gt;
-&lt;span class=&quot;c1&quot;&gt;-- when any of them do, we want to just bail out.&lt;/span&gt;
-&lt;span class=&quot;c1&quot;&gt;--&lt;/span&gt;
-&lt;span class=&quot;c1&quot;&gt;-- Remember the definition of the Either monad is:&lt;/span&gt;
-&lt;span class=&quot;c1&quot;&gt;-- instance Monad (Either e) where&lt;/span&gt;
-&lt;span class=&quot;c1&quot;&gt;--   return = Right&lt;/span&gt;
-&lt;span class=&quot;c1&quot;&gt;--   Right m &amp;gt;&amp;gt;= k = k m&lt;/span&gt;
-&lt;span class=&quot;c1&quot;&gt;--   Left e  &amp;gt;&amp;gt;= _ = Left e&lt;/span&gt;
-&lt;span class=&quot;c1&quot;&gt;--&lt;/span&gt;
-&lt;span class=&quot;c1&quot;&gt;-- So a Left value short circuits the rest of the Monad, and a Right value&lt;/span&gt;
-&lt;span class=&quot;c1&quot;&gt;-- passes the value off to the next step.&lt;/span&gt;
-&lt;span class=&quot;n&quot;&gt;doWork&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;::&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Either&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;String&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;String&lt;/span&gt;
-&lt;span class=&quot;n&quot;&gt;doWork&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;kr&quot;&gt;do&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;-- use do notation syntax sugar for the Either monad&lt;/span&gt;
-
-    &lt;span class=&quot;c1&quot;&gt;-- First, do something that may or may not work. We get back a type of&lt;/span&gt;
-    &lt;span class=&quot;c1&quot;&gt;-- Either String String (since that's the type of the example&lt;/span&gt;
-    &lt;span class=&quot;c1&quot;&gt;-- eitherFailure function here)&lt;/span&gt;
-    &lt;span class=&quot;n&quot;&gt;x&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;lt;-&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;eitherFailure&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Pass&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;Initial Thing&quot;&lt;/span&gt;
-
-    &lt;span class=&quot;c1&quot;&gt;-- Based on what we get in x, just go ahead and attempt it.&lt;/span&gt;
-    &lt;span class=&quot;c1&quot;&gt;-- Note that the function eitherFailure takes a simple&lt;/span&gt;
-    &lt;span class=&quot;c1&quot;&gt;-- String as its argument.  So we didn't have to unwrap the&lt;/span&gt;
-    &lt;span class=&quot;c1&quot;&gt;-- first Either value.&lt;/span&gt;
-    &lt;span class=&quot;n&quot;&gt;y&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;lt;-&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;eitherFailure&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Error&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;Second Thing &quot;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;++&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;x&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
-
-    &lt;span class=&quot;c1&quot;&gt;-- We can't just wire a Maybe value in the middle here,&lt;/span&gt;
-    &lt;span class=&quot;c1&quot;&gt;-- since it doesn't typecheck. (Maybe isn't an Either),&lt;/span&gt;
-    &lt;span class=&quot;c1&quot;&gt;-- even though they play similarly. If we just tried, we'd get:&lt;/span&gt;
-
-    &lt;span class=&quot;c1&quot;&gt;-- z &amp;lt;- maybeFailure Error&lt;/span&gt;
-    &lt;span class=&quot;c1&quot;&gt;-- Couldn't match type `Maybe' with `Either String'&lt;/span&gt;
-
-    &lt;span class=&quot;c1&quot;&gt;-- But instead, we can use Control.Error.Util.note to convert&lt;/span&gt;
-    &lt;span class=&quot;c1&quot;&gt;-- an &quot;empty&quot; Nothing value into a Left value with a descriptive&lt;/span&gt;
-    &lt;span class=&quot;c1&quot;&gt;-- error.  So now we'd get a proper Either value we can chain&lt;/span&gt;
-    &lt;span class=&quot;c1&quot;&gt;-- into this overall monad.&lt;/span&gt;
-    &lt;span class=&quot;n&quot;&gt;note&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;Failed the Maybe: &quot;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;++&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;y&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;$&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;maybeFailure&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Pass&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;y&lt;/span&gt;
-
-    &lt;span class=&quot;c1&quot;&gt;-- Since the last line of this `do` block is the type we plan on&lt;/span&gt;
-    &lt;span class=&quot;c1&quot;&gt;-- returning, there's no `return` call needed.&lt;/span&gt;
-
-
-&lt;span class=&quot;c1&quot;&gt;-- Simple function that we can use to force it to error out with a Left, or&lt;/span&gt;
-&lt;span class=&quot;c1&quot;&gt;-- pass with a Right value. It just includes some helper text as its content,&lt;/span&gt;
-&lt;span class=&quot;c1&quot;&gt;-- showing what happened.&lt;/span&gt;
-&lt;span class=&quot;n&quot;&gt;eitherFailure&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;::&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Flag&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;String&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Either&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;String&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;String&lt;/span&gt;
-&lt;span class=&quot;n&quot;&gt;eitherFailure&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Pass&lt;/span&gt;  &lt;span class=&quot;n&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Right&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;$&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;-&amp;gt; Passed &quot;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;++&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;val&lt;/span&gt;
-&lt;span class=&quot;n&quot;&gt;eitherFailure&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Error&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Left&lt;/span&gt;  &lt;span class=&quot;o&quot;&gt;$&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;-&amp;gt; Failed &quot;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;++&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;val&lt;/span&gt;
-
-&lt;span class=&quot;c1&quot;&gt;-- Simlar to eitherFailure, but return a (Just String) or a Nothing based on&lt;/span&gt;
-&lt;span class=&quot;c1&quot;&gt;-- if we told it to fail.&lt;/span&gt;
-&lt;span class=&quot;n&quot;&gt;maybeFailure&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;::&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Flag&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;String&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Maybe&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;String&lt;/span&gt;
-&lt;span class=&quot;n&quot;&gt;maybeFailure&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Pass&lt;/span&gt;  &lt;span class=&quot;n&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Just&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;$&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;-&amp;gt; Passed maybe &quot;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;++&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;val&lt;/span&gt;
-&lt;span class=&quot;n&quot;&gt;maybeFailure&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Error&lt;/span&gt; &lt;span class=&quot;kr&quot;&gt;_&lt;/span&gt;   &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;Nothing&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
-
-&lt;p&gt;My favorite part of diving into the error library is that my worry from yesterday,
-&lt;code class=&quot;highlighter-rouge&quot;&gt;except then I’d have to switch the Maybe result out of Lens-Aeson into a “fuller” Either type.&lt;/code&gt; is just the &lt;code class=&quot;highlighter-rouge&quot;&gt;note&lt;/code&gt; function I demoed above.&lt;/p&gt;</content><author><name>Chris Schneider</name></author><summary type="html">After playing with the bitcoin price fetcher, I was disappointed at how… hard it was to deal with the multiple layers of potential errors. I started looking into the errors package on Hackage for a way out. It is a one-stop-shop for all the standard error handling mechanisms in Haskell. It reexports the standard Either and Maybe types, and also adds many helper functions to move between Either and Maybe types, in addition to helping out with the various transformer versions of both (MaybeT and EitherT)</summary></entry></feed>
+stuff like &lt;code class=&quot;highlighter-rouge&quot;&gt;lift&lt;/code&gt; and friends to do IO in that Either workflow.&lt;/p&gt;</content><author><name>Chris Schneider</name></author><summary type="html">After yesterday’s post about the Either Monad I wanted to see if it was easy to embed that bit of doWork stuff right into the main function.</summary></entry></feed>

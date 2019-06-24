@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>
+    
+      Checking EE Bonds with Google Sheets &middot; Watch Chris Learn
+    
+  </title>
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Libre+Baskerville:400,400i,700">
+</head>
+
+  <body>
+      <nav class="nav">
+    <div class="nav-container">
+      <a href="/">
+        <h2 class="nav-title">Watch Chris Learn</h2>
+      </a>
+      <ul>
+        <li><a href="/about">About</a></li>
+        <li><a href="/">Posts</a></li>
+      </ul>
+  </div>
+</nav>
+
+
+
+    <main>
+      <div class="post">
+  <div class="post-info">
+    <span>Written by</span>
+    
+        Chris Schneider
+    
+
+    
+      <br>
+      <span>on&nbsp;</span><time datetime="2019-06-23 20:40:25 +0000">June 23, 2019</time>
+    
+  </div>
+
+  <h1 class="post-title">Checking EE Bonds with Google Sheets</h1>
+  <div class="post-line"></div>
+
+  <p>I had a stack of old and untracked old United States EE Treasury bonds. It was
+finally time to check them.</p>
+
+<p>After typing in the Serial Number, Issue Date, and Face Value into Google
+Sheets, I wanted to fetch the rest of the interesting data from the official
+<a href="https://www.treasurydirect.gov/BC/SBCPrice">Treasury site</a>.</p>
+
+<p>It took me a bit to figure out the right spreadsheet formula, so I figured I’d
+write it here if anybody else was looking.</p>
+
+<p>Manually fill out the data:</p>
+
+<ul>
+  <li>A column: Serial Number</li>
+  <li>B column: Date Issued</li>
+  <li>C column: Face Value</li>
+</ul>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>=QUERY(ImportHtml("https://www.treasurydirect.gov/BC/SBCPrice?RedemptionDate=06%2F2019&amp;Series=EE&amp;Denomination=" &amp; ENCODEURL(C2) &amp; "&amp;SerialNumber=" &amp; A2 &amp; "&amp;IssueDate=" &amp; ENCODEURL(B2) &amp; "&amp;btnAdd.x=CALCULATE&amp;OldRedemptionDate=782&amp;ViewPos=1","table",4),"offset 1",0)
+</code></pre></div></div>
+
+<p>I put this in column E, and the values will be:</p>
+
+<ul>
+  <li>E: Serial Number again</li>
+  <li>F: Type (“EE”)</li>
+  <li>G: Face Value</li>
+  <li>H: Issue Date</li>
+  <li>I: Next Accrual</li>
+  <li>J: Final Maturity</li>
+  <li>K: Purchase Price</li>
+  <li>L: Total Interest</li>
+  <li>M: Interest Rate</li>
+  <li>N: Total Current Value</li>
+  <li>O: Note Codes (“MA” == Matured)</li>
+</ul>
+
+<p>Then to fix up the total current value column, I had one more I put in R:</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>=value(regexreplace(N2,"(\$|\*)",""))
+</code></pre></div></div>
+
+<p>This converts the string value with the asterisk and dollar sign over to be a
+proper number that Google Sheets can do math on.</p>
+
+
+</div>
+
+<div class="pagination">
+  
+  
+    <a href="/haskell/2015/01/20/pretty-printing-a-tree-with-text-dot-prettyprint.html" class="right arrow">&#8594;</a>
+  
+
+  <a href="#" class="top">Top</a>
+</div>
+
+    </main>
+
+    <footer>
+  <span>
+    &copy; <time datetime="2019-06-23 22:17:27 -0600">2019</time> . Made with Jekyll using the <a href="https://github.com/chesterhow/tale/">Tale</a> theme.
+  </span>
+</footer>
+
+  </body>
+</html>
