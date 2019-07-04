@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+  <!-- Global site tag (gtag.js) - Google Analytics -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=UA-26691642-2"></script>
+  <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'UA-26691642-2');
+  </script>
+
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>
+    
+      Fetching Assigned Reviews from GitHub v4 (graphql) API &middot; Watch Chris Learn
+    
+  </title>
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Libre+Baskerville:400,400i,700">
+</head>
+
+  <body>
+      <nav class="nav">
+    <div class="nav-container">
+      <a href="/">
+        <h2 class="nav-title">Watch Chris Learn</h2>
+      </a>
+      <ul>
+        <li><a href="/about">About</a></li>
+        <li><a href="/">Posts</a></li>
+      </ul>
+  </div>
+</nav>
+
+
+
+    <main>
+      <div class="post">
+  <div class="post-info">
+    <span>Written by</span>
+    
+        Chris Schneider
+    
+
+    
+      <br>
+      <span>on&nbsp;</span><time datetime="2019-07-04 19:16:00 +0000">July 04, 2019</time>
+    
+  </div>
+
+  <h1 class="post-title">Fetching Assigned Reviews from GitHub v4 (graphql) API</h1>
+  <div class="post-line"></div>
+
+  <p>Working on optimizing my workflow with the rest of the team, I wanted to build
+a little tool to fetch all the PRs that somebody has explicitly asked for my
+review on. I did a little research, and played with the GitHub API, but didn’t
+find anything. I sent a quick message to their support, which was responded to
+almost immediately. The trick was to use the generic ‘Search’ query, instead of looking for a specifically built graphql sequence.</p>
+
+<p>Hopefully this will help anybody who’s looking for something similar.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>{
+  search(type:ISSUE, query:"is:open review-requested:cschneid", first:100) {
+    edges {
+      node {
+        ... on PullRequest {
+          title
+          url
+        }
+      }
+    }
+  }
+}
+</code></pre></div></div>
+
+<p>More details to fine tune your <a href="https://help.github.com/en/articles/searching-issues-and-pull-requests#search-by-pull-request-review-status-and-reviewer">search query</a>.</p>
+
+
+</div>
+
+<div class="pagination">
+  
+  
+    <a href="/hacks/2019/06/23/checking-ee-bonds-with-google-sheets.html" class="right arrow">&#8594;</a>
+  
+
+  <a href="#" class="top">Top</a>
+</div>
+
+    </main>
+
+    <footer>
+  <span>
+    &copy; <time datetime="2019-07-04 13:22:50 -0600">2019</time> . Made with Jekyll using the <a href="https://github.com/chesterhow/tale/">Tale</a> theme.
+  </span>
+</footer>
+
+  </body>
+</html>
