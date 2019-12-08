@@ -1,0 +1,113 @@
+I"(<p>I looked into Haskell’s
+<a href="http://hackage.haskell.org/package/pretty">pretty package</a>
+(and the <a href="http://hackage.haskell.org/package/prettyclass">prettyclass package</a>)
+to print out a simple tree structure I defined.
+I wanted a nicely nested output.</p>
+
+<h2 id="why-not-show">Why not Show?</h2>
+
+<p>The show typeclass isn’t what we want for human readable output.
+<code class="highlighter-rouge">read . show</code> should be the same as <code class="highlighter-rouge">id</code>.
+This means that we can’t ever throw away extraneous data
+, and we have to be 100% sure to preserve any structure.</p>
+
+<p>These rules get in the way of human readable output.  For example, printing a
+<code class="highlighter-rouge">User</code> record might omit the full address if it gets too long, not include the
+bio, and generally lay out the data in a simplified manner.</p>
+
+<h2 id="the-pretty-typeclass">The Pretty typeclass</h2>
+
+<p>The <a href="http://hackage.haskell.org/package/prettyclass">prettyclass package</a> defines a general typeclass for all types
+that can be printed out for human consumption.  It comes with some standard types
+defined (like Int and similar)</p>
+
+<p>Before we talk about pretty printing, we need to look at our type first.</p>
+
+<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kr">data</span> <span class="kt">Tree</span> <span class="n">a</span> <span class="o">=</span> <span class="kt">Leaf</span> <span class="n">a</span> <span class="o">|</span> <span class="kt">Node</span> <span class="p">(</span><span class="kt">Tree</span> <span class="n">a</span><span class="p">)</span> <span class="p">(</span><span class="kt">Tree</span> <span class="n">a</span><span class="p">)</span> <span class="kr">deriving</span> <span class="p">(</span><span class="kt">Show</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>A simple binary tree, where interior nodes don’t store anything, and leaves
+hold all the values.</p>
+
+<p>We need to define an instance of our <code class="highlighter-rouge">Pretty</code> for our type.
+As the docs say, <code class="highlighter-rouge">Minimal complete definition is either pPrintPrec or pPrint.</code></p>
+
+<p><code class="highlighter-rouge">pPrintPrec</code> takes a PrettyLevel, which defines the level of detailed requested.
+Since we want to show all the data in the tree, this is unnecessary for us, we can
+implement the simpler <code class="highlighter-rouge">pPrint</code> function.</p>
+
+<h3 id="the-typeclass-instance-definition">The typeclass instance definition</h3>
+
+<p>Since our type is parameterized on <code class="highlighter-rouge">a</code>, we need to limit it somehow.
+In this case, we’re going to say that if our <code class="highlighter-rouge">a</code> is a member of <code class="highlighter-rouge">Pretty</code>
+, then we can pretty print a whole tree of <code class="highlighter-rouge">a</code></p>
+
+<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kr">import</span> <span class="nn">Text.PrettyPrint.HughesPJClass</span>
+
+<span class="kr">instance</span> <span class="p">(</span><span class="kt">Pretty</span> <span class="n">a</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="kt">Pretty</span> <span class="p">(</span><span class="kt">Tree</span> <span class="n">a</span><span class="p">)</span> <span class="kr">where</span>
+  <span class="n">pPrint</span> <span class="n">tree</span> <span class="o">=</span> <span class="o">...</span>
+</code></pre></div></div>
+
+<h2 id="the-textprettyprint">The Text.PrettyPrint</h2>
+
+<p>The <a href="http://hackage.haskell.org/package/pretty">pretty package</a> implements a TON of helpers to actually lay out the data.</p>
+
+<p>In this case, our goal is to have the tree look like:</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Node:
+  Leaf: 1
+  Node:
+    Leaf: 2
+    Leaf: 3
+</code></pre></div></div>
+
+<p>Each level gets labeled by type, and nesting levels get indented by 2.</p>
+
+<h3 id="the-leaf-case">The Leaf Case</h3>
+
+<p>So first, lets do the <code class="highlighter-rouge">Leaf</code> case, where we print the literal <code class="highlighter-rouge">Leaf:</code> and then
+ask the <code class="highlighter-rouge">a</code> type to be pretty printed itself.</p>
+
+<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  <span class="n">pPrint</span> <span class="p">(</span><span class="kt">Leaf</span> <span class="n">a</span><span class="p">)</span>   <span class="o">=</span> <span class="n">text</span> <span class="s">"Leaf: "</span> <span class="o">&lt;&gt;</span> <span class="n">pPrint</span> <span class="n">a</span>
+</code></pre></div></div>
+
+<p>Pretty implements <code class="highlighter-rouge">&lt;&gt;</code> the same as a monoid, combining two <code class="highlighter-rouge">Doc</code>s into one.
+Pretty also implements a <code class="highlighter-rouge">&lt;+&gt;</code> which is like <code class="highlighter-rouge">&lt;&gt;</code> except it will insert a
+space between two non-empty documents.</p>
+
+<h3 id="the-node-case">The Node case</h3>
+
+<p>The <code class="highlighter-rouge">Node</code> case is much more interesting.</p>
+
+<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  <span class="n">pPrint</span> <span class="p">(</span><span class="kt">Node</span> <span class="n">l</span> <span class="n">r</span><span class="p">)</span> <span class="o">=</span> <span class="n">vcat</span> <span class="p">[</span> <span class="n">text</span> <span class="s">"Node:"</span>
+                           <span class="p">,</span> <span class="n">nest</span> <span class="mi">2</span> <span class="p">(</span><span class="n">pPrint</span> <span class="n">l</span><span class="p">)</span>
+                           <span class="p">,</span> <span class="n">nest</span> <span class="mi">2</span> <span class="p">(</span><span class="n">pPrint</span> <span class="n">r</span><span class="p">)]</span>
+</code></pre></div></div>
+
+<p>First we destructure the argument
+, then we build a 3 element list
+, each containing a <code class="highlighter-rouge">Doc</code> type.
+The first one is the literal <code class="highlighter-rouge">Node:</code> text
+, then the next two are indented by 2 spaces.
+Then we recursively call <code class="highlighter-rouge">pPrint</code> on the left and right sub-trees.</p>
+
+<p><code class="highlighter-rouge">nest</code> takes an indent level, and a document and returns a new document with the same content, except indented.</p>
+
+<p>The <code class="highlighter-rouge">vcat</code> function takes a list of documents, and lays them out vertically.</p>
+
+<p>Fairly straight forward.</p>
+
+<h2 id="and">And…</h2>
+
+<p>I was impressed by how easy this library was to use.
+Although I was rather confused by how hard it was to use the typeclass.
+The <code class="highlighter-rouge">pretty</code> package specifically has a module that defines the Pretty class,
+but GHC couldn’t find it.</p>
+
+<p>I could see the use of this library in a large project, full of custom types.</p>
+
+<p>A logging function could easily ask to <code class="highlighter-rouge">prettyShow</code> each individual item it logs.</p>
+
+<p>Full code is available at: https://github.com/cschneid/cschneid-pretty/</p>
+
+:ET

@@ -1,0 +1,3 @@
+I"Ð<p>I was investigating the <code class="highlighter-rouge">$!</code> variable in Ruby, specifically if it is truely a
+global variable the way the leading <code class="highlighter-rouge">$</code> implies.</p>
+:ET

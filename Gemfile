@@ -8,7 +8,7 @@ source "https://rubygems.org"
 #
 # This will help ensure the proper Jekyll version is running.
 # Happy Jekylling!
-gem "jekyll", "~> 3.6.2"
+gem "jekyll" #, "~> 3.6.2"
 
 # https://github.com/yegor256/jekyll-github-deploy
 # Deploys to github

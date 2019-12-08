@@ -1,0 +1,7 @@
+I"<p>I looked into Haskell’s
+<a href="http://hackage.haskell.org/package/pretty">pretty package</a>
+(and the <a href="http://hackage.haskell.org/package/prettyclass">prettyclass package</a>)
+to print out a simple tree structure I defined.
+I wanted a nicely nested output.</p>
+
+:ET

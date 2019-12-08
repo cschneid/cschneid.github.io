@@ -1,0 +1,16 @@
+I"†<p>This was a fun little hack.  I wanted to be able to grab the current price off of the exchange I use (coinbase)</p>
+
+<div class="language-ruby highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">require</span> <span class="s1">'json'</span>
+<span class="nb">require</span> <span class="s1">'open-uri'</span>
+
+<span class="no">JSON</span><span class="p">.</span><span class="nf">parse</span><span class="p">(</span>
+      <span class="nb">open</span><span class="p">(</span><span class="s2">"https://www.coinbase.com"</span><span class="p">).</span>
+      <span class="nf">each_line</span><span class="p">.</span><span class="nf">grep</span><span class="p">(</span><span class="sr">/window\.exchange/</span><span class="p">).</span>
+      <span class="nf">first</span><span class="p">.</span><span class="nf">sub</span><span class="p">(</span><span class="sr">/.*?=/</span><span class="p">,</span> <span class="s1">''</span><span class="p">).</span><span class="nf">sub</span><span class="p">(</span><span class="sr">/;\n$/</span><span class="p">,</span> <span class="s1">''</span><span class="p">)</span>
+      <span class="p">)[</span><span class="s2">"btc_to_usd"</span><span class="p">]</span>
+<span class="c1"># =&gt; "843.0"</span>
+</code></pre></div></div>
+
+<p>Granted this will explode hard if their page ever changes. But who
+cares, took like 5 minutes to write.</p>
+:ET

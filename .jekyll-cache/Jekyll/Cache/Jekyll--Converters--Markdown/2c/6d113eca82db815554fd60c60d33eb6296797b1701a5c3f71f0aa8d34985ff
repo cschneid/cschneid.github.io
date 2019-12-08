@@ -1,0 +1,6 @@
+I"�<p>Working on optimizing my workflow with the rest of the team, I wanted to build
+a little tool to fetch all the PRs that somebody has explicitly asked for my
+review on. I did a little research, and played with the GitHub API, but didn’t
+find anything. I sent a quick message to their support, which was responded to
+almost immediately. The trick was to use the generic ‘Search’ query, instead of looking for a specifically built graphql sequence.</p>
+:ET

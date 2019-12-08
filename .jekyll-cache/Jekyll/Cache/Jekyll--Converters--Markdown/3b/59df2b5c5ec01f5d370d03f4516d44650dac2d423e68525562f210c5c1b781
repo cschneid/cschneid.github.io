@@ -1,0 +1,155 @@
+I">9<h2 id="the-problem-statement">The Problem Statement</h2>
+
+<h3 id="background">Background</h3>
+
+<p>At Comverge, we are building a new project based on the lambda architecture. One of the core aspects of the lambda architecture revolves around an immutable, always growing store of data.</p>
+
+<p>We store this data as a series of <strong>facts</strong>.  Each fact is a single statement about the state of the world at a given time.  For example, here is a set of facts generated when a new user signs up.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>{ "subject" =&gt; "user:1", "property" =&gt; "username", "value" =&gt; "cschneid", "asserted_at" =&gt; "2014-03-01T06:00:00Z" }
+{ "subject" =&gt; "user:1", "property" =&gt; "realname", "value" =&gt; "Chris", "asserted_at" =&gt; "2014-03-01T06:00:00Z" }
+{ "subject" =&gt; "user:1", "property" =&gt; "password", "value" =&gt; "b4e7a69126ef83206b8db39fb78f2bdf", "asserted_at" =&gt; "2014-03-01T06:00:00Z" }
+</code></pre></div></div>
+
+<p>It often takes a bunch of facts working in concert to build a consistent view of the world.</p>
+
+<p>The real beauty of this approach is when new records come in, we can rewind time and still see what we knew at what point.</p>
+
+<p>For example, if this user changes their username, we don’t change the old username record, but just record the new one, and let the timestamps tell us the current state of the user.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>{ "subject" =&gt; "user:1", "property" =&gt; "username", "value" =&gt; "ChrisTheWizard", "asserted_at" =&gt; "2014-03-05T06:00:00Z" }
+</code></pre></div></div>
+
+<h3 id="actual-problem-statement">Actual Problem Statement</h3>
+
+<p>I want a map-reduce job to generate the newest state of everything in our system.  So in the background example, I would want a single record that contained:</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>{ "subject" =&gt; "user:1", "username" =&gt; "ChrisTheWizard", "realname" =&gt; "Chris", "password" =&gt; "b4e7a69126ef83206b8db39fb78f2bdf"}
+</code></pre></div></div>
+
+<p>We’ve thrown away the older username fact, and rearranged the data.</p>
+
+<h2 id="scalding">Scalding</h2>
+
+<p>So I played around with hadoop in various forms, and ended up with Scalding as an environment to write map-reduce jobs in.</p>
+
+<p>I’ll walk you through the code I ended up with, and where I’m still working to finish up.</p>
+
+<h3 id="a-few-imports">A few imports</h3>
+
+<p>We of course need scalding’s libraries, and our specific use cases need json parsing, and a mutable map for collecting up the final view of the data.</p>
+
+<div class="language-scala highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">import</span> <span class="nn">com.twitter.scalding._</span>
+<span class="k">import</span> <span class="nn">scala.util.parsing.json._</span>
+<span class="k">import</span> <span class="nn">scala.collection.mutable</span>
+</code></pre></div></div>
+
+<h3 id="setup-input--output">Setup Input &amp; Output</h3>
+
+<p>Next up is the top matter of the code, where we setup the input and output files and types.</p>
+
+<p>The data we have is specifically stored in hadoop sequence files, where the key is the timestamp of when the data was written, and an encoded JSON structure of the fact.  We don’t care about the sequence file’s timestamp, so we just throw that away.</p>
+
+<p>Similarly, the final output should be stored as JSON. The <code class="highlighter-rouge">JsonLine</code> class makes that really easy, but is fairly inflexible.  It may be that I’ll need to write my own output class at some point.</p>
+
+<div class="language-scala highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">class</span> <span class="nc">ExtractJSON</span><span class="o">(</span><span class="n">args</span> <span class="k">:</span> <span class="kt">Args</span><span class="o">)</span> <span class="k">extends</span> <span class="nc">Job</span><span class="o">(</span><span class="n">args</span><span class="o">)</span> <span class="o">{</span>
+  <span class="k">val</span> <span class="nv">input</span> <span class="k">=</span> <span class="nc">WritableSequenceFile</span><span class="o">(</span><span class="s">"/advanced-apps/master-dataset/Facts.1394232008699"</span><span class="o">,</span> <span class="o">(</span><span class="ss">'sequenceFileKey,</span> <span class="ss">'factJSON)</span><span class="o">)</span>
+  <span class="k">val</span> <span class="nv">output</span> <span class="k">=</span> <span class="nc">JsonLine</span><span class="o">(</span><span class="s">"/fact_data_output"</span><span class="o">)</span>
+</code></pre></div></div>
+
+<h3 id="json-parse">JSON Parse</h3>
+
+<p><strong>Everything from here on out is a single pipeline.</strong></p>
+
+<p>We take the input file, and start reading from it. The first thing we need to do is deserialize the json (a single field of text as far as scalding is concerned) into the set of fields that we actually care about.  We use the built-in JSON parser in scala to do this work for us.</p>
+
+<p>Notice that a new field that hasn’t been mentioned shows up too, indicating if the JSON parsed or not.  We will use that in the very next code snippet.</p>
+
+<div class="language-scala highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  <span class="n">input</span>
+    <span class="o">.</span><span class="py">read</span>
+
+    <span class="c1">// Parse the json of each fact. Extract out the 4 expected values.
+</span>    <span class="o">.</span><span class="py">map</span><span class="o">((</span><span class="ss">'factJSON)</span> <span class="o">-&gt;</span> <span class="o">(</span><span class="ss">'parse_status,</span> <span class="ss">'asserted_at,</span> <span class="ss">'subject,</span> <span class="ss">'property,</span> <span class="ss">'value)</span><span class="o">)</span> <span class="o">{</span>
+      <span class="n">line</span><span class="k">:</span> <span class="kt">String</span> <span class="o">=&gt;</span> <span class="o">{</span>
+        <span class="nv">JSON</span><span class="o">.</span><span class="py">parseFull</span><span class="o">(</span><span class="n">line</span><span class="o">)</span> <span class="k">match</span> <span class="o">{</span>
+          <span class="k">case</span> <span class="nc">Some</span><span class="o">(</span><span class="n">data</span><span class="k">:</span> <span class="kt">Map</span><span class="o">[</span><span class="kt">String</span>, <span class="kt">Any</span><span class="o">])</span> <span class="k">=&gt;</span> <span class="o">(</span><span class="s">"success"</span><span class="o">,</span>
+                                                <span class="nf">data</span><span class="o">(</span><span class="s">"asserted_at"</span><span class="o">),</span>
+                                                <span class="nf">data</span><span class="o">(</span><span class="s">"subject"</span><span class="o">),</span>
+                                                <span class="nf">data</span><span class="o">(</span><span class="s">"property"</span><span class="o">),</span>
+                                                <span class="nf">data</span><span class="o">(</span><span class="s">"value"</span><span class="o">)</span>
+                                              <span class="o">)</span>
+          <span class="k">case</span> <span class="nc">None</span> <span class="k">=&gt;</span> <span class="o">(</span><span class="s">"failed"</span><span class="o">,</span> <span class="s">""</span><span class="o">,</span> <span class="s">""</span><span class="o">,</span> <span class="s">""</span><span class="o">,</span> <span class="s">""</span><span class="o">)</span>
+        <span class="o">}</span>
+      <span class="o">}</span>
+    <span class="o">}</span>
+</code></pre></div></div>
+
+<h3 id="error-check-the-json-parse">Error check the JSON parse</h3>
+
+<p>The JSON parsing code always works, and lets a value through. But some of those values may have “failed” in the <code class="highlighter-rouge">parse_status</code> field.  If they do, just stop parsing that whole tuple (ie, throw away that whole line of input).</p>
+
+<p>After that’s done, we have no more use for that field, so throw it away to keep the dataset small as we continue to move through the input.</p>
+
+<div class="language-scala highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    <span class="o">.</span><span class="py">filter</span><span class="o">(</span><span class="ss">'parse_status)</span> <span class="o">{</span> <span class="n">status</span><span class="k">:</span> <span class="kt">String</span> <span class="o">=&gt;</span> <span class="n">status</span> <span class="o">!=</span> <span class="s">"failed"</span> <span class="o">}</span>
+    <span class="o">.</span><span class="py">discard</span><span class="o">(</span><span class="ss">'parse_status)</span>
+</code></pre></div></div>
+
+<h3 id="find-the-newest">Find the newest</h3>
+
+<p>Now our goal is to find only the newest version of a fact for each pair of subject / property.  Continuing the background example, this would be the newest username that we know.</p>
+
+<p>We do a <code class="highlighter-rouge">groupBy</code>, then sort the results based on the timestamp.  Then take the first one result of that sort. (the newest item). Scalding provides an all-in-one way to do that with <code class="highlighter-rouge">sortWithTake</code>, so just use that.</p>
+
+<p>The <code class="highlighter-rouge">_</code> variable is a bit surprising to me. Mostly my ignorance of scala, it must be an implicit argument being passed into this anonymous function.  In any case, it represents the whole grouping of {subject / property}</p>
+
+<p>The comparison function is tricky since my <code class="highlighter-rouge">value</code> field is an <code class="highlighter-rouge">Any</code>, which can’t be automatically sorted by the language.  So instead I give it an explicit rule to sort by (just use the timestamp, and ignore the value field).  But I do need the value to be included in that <code class="highlighter-rouge">sortWithTake</code> so it comes out the other side of the funnel with the value I was looking for.</p>
+
+<p>Once done, flatten out the temporary <code class="highlighter-rouge">items</code> field that we stored that pair of <code class="highlighter-rouge">asserted_at, value</code> into, and get rid of it.</p>
+
+<div class="language-scala highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    <span class="c1">// Find the newest asserted at for each combo of subject &amp; property
+</span>    <span class="o">.</span><span class="py">groupBy</span><span class="o">(</span><span class="ss">'subject,</span> <span class="ss">'property)</span> <span class="o">{</span>
+      <span class="nv">_</span><span class="o">.</span><span class="py">sortWithTake</span><span class="o">[(</span><span class="kt">String</span>, <span class="kt">Any</span><span class="o">)]((</span><span class="ss">'asserted_at,</span> <span class="ss">'value)</span> <span class="o">-&gt;</span> <span class="ss">'items </span><span class="o">,</span> <span class="mi">1</span><span class="o">)</span> <span class="o">{</span>
+        <span class="nf">case</span> <span class="o">((</span><span class="n">asL</span><span class="o">,</span> <span class="k">_</span><span class="o">),</span> <span class="o">(</span><span class="n">asR</span><span class="o">,</span> <span class="k">_</span><span class="o">))</span> <span class="k">=&gt;</span> <span class="n">asL</span> <span class="o">&gt;</span> <span class="n">asR</span>
+      <span class="o">}</span>
+    <span class="o">}</span>
+    <span class="o">.</span><span class="py">flatten</span><span class="o">[(</span><span class="kt">String</span>, <span class="kt">Any</span><span class="o">)]((</span><span class="ss">'items)</span> <span class="o">-&gt;</span> <span class="o">(</span><span class="ss">'asserted_at,</span> <span class="ss">'value)</span><span class="o">)</span>
+    <span class="o">.</span><span class="py">discard</span><span class="o">(</span><span class="ss">'items)</span>
+</code></pre></div></div>
+
+<h3 id="combine-the-many-facts">Combine the many facts</h3>
+
+<p>At this point, we now have all the newest facts, having removed any outdated ones during the sort.</p>
+
+<p>So the job now is to combine many rows of facts about a subject into a single row that represents all of what we know about that subject.</p>
+
+<p>Once again, we <code class="highlighter-rouge">groupBy</code>, but this time just on subject.</p>
+
+<p>Then we use <code class="highlighter-rouge">foldLeft</code> to loop over each property/value pair that we get and save it into a mutable <code class="highlighter-rouge">Map</code>.  I had a bit of fun here trying to figure out how the syntax for adding to a Map works. See the result below for how I did it (apparently there are 2 or 3 different ways).</p>
+
+<p>The tuple that comes out of this step is {subject, properties(property/value, property/value…)}</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    .groupBy('subject) {
+      _.foldLeft(('property, 'value) -&gt; 'properties)(mutable.Map.empty[String,Any]) {
+        (properties: mutable.Map[String,Any], propAndVal: (String, Any)) =&gt;
+        val (prop, value) = propAndVal
+        properties += prop -&gt; value
+      }
+    }
+</code></pre></div></div>
+
+<h3 id="finish-up">Finish Up</h3>
+
+<p>So now we have a tuple of data we want, lets serialize it back out to disk and close the class we were working inside of.</p>
+
+<div class="language-scala highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    <span class="o">.</span><span class="py">write</span><span class="o">(</span><span class="n">output</span><span class="o">)</span>
+<span class="o">}</span>
+</code></pre></div></div>
+
+<h3 id="hopefully-that-helped">Hopefully that helped!</h3>
+
+<p>It took me about 2 days to get the whole stack there working right, and <code class="highlighter-rouge">posco</code> on IRC was super helpful in getting me unstuck.</p>
+
+<h3 id="next-steps">Next Steps</h3>
+
+<p>I need to figure out the actual output format I want.  I think it includes streaming the output into Cassandra, rather than simple a JSON format on disk.  That will involve figuring out how to connect to Cassandra and do the insert. I’ll try to write a follow-up post about that.</p>
+:ET
