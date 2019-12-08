@@ -67,10 +67,10 @@ recombined version of a domain object at a given time.</p>
 
 <h2 id="a-fact">A Fact</h2>
 
-<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w"> </span><span class="s2">"asserted_at"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-05-01T04:02:56Z"</span><span class="p">,</span><span class="w">
-  </span><span class="s2">"subject"</span><span class="p">:</span><span class="w"> </span><span class="s2">"device:123"</span><span class="p">,</span><span class="w">
-  </span><span class="s2">"property"</span><span class="p">:</span><span class="w"> </span><span class="s2">"serial_number"</span><span class="p">,</span><span class="w">
-  </span><span class="s2">"value"</span><span class="p">:</span><span class="w"> </span><span class="s2">"V29B044"</span><span class="w"> </span><span class="p">}</span><span class="w">
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w"> </span><span class="nl">"asserted_at"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-05-01T04:02:56Z"</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"subject"</span><span class="p">:</span><span class="w"> </span><span class="s2">"device:123"</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"property"</span><span class="p">:</span><span class="w"> </span><span class="s2">"serial_number"</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"value"</span><span class="p">:</span><span class="w"> </span><span class="s2">"V29B044"</span><span class="w"> </span><span class="p">}</span><span class="w">
 </span></code></pre></div></div>
 
 <h2 id="argonaut">Argonaut.</h2>
@@ -88,8 +88,8 @@ at how easy this was.</p>
 <span class="k">case</span> <span class="k">class</span> <span class="nc">Fact</span><span class="o">(</span><span class="n">asserted_at</span><span class="k">:</span> <span class="kt">String</span><span class="o">,</span> <span class="n">subject</span> <span class="k">:</span> <span class="kt">String</span><span class="o">,</span> <span class="n">property</span><span class="k">:</span> <span class="kt">String</span><span class="o">,</span> <span class="n">value</span><span class="k">:</span> <span class="kt">Json</span><span class="o">)</span>
 
 <span class="k">object</span> <span class="nc">Fact</span> <span class="o">{</span>
-  <span class="k">implicit</span> <span class="k">def</span> <span class="nc">FactCodecJson</span> <span class="k">:</span> <span class="kt">CodecJson</span><span class="o">[</span><span class="kt">Fact</span><span class="o">]</span> <span class="k">=</span>
-    <span class="n">casecodec4</span><span class="o">(</span><span class="nc">Fact</span><span class="o">.</span><span class="n">apply</span><span class="o">,</span> <span class="nc">Fact</span><span class="o">.</span><span class="n">unapply</span><span class="o">)(</span><span class="s">"asserted_at"</span><span class="o">,</span> <span class="s">"subject"</span><span class="o">,</span> <span class="s">"property"</span><span class="o">,</span> <span class="s">"value"</span><span class="o">)</span>
+  <span class="k">implicit</span> <span class="k">def</span> <span class="nf">FactCodecJson</span> <span class="k">:</span> <span class="kt">CodecJson</span><span class="o">[</span><span class="kt">Fact</span><span class="o">]</span> <span class="k">=</span>
+    <span class="nf">casecodec4</span><span class="o">(</span><span class="nv">Fact</span><span class="o">.</span><span class="py">apply</span><span class="o">,</span> <span class="nv">Fact</span><span class="o">.</span><span class="py">unapply</span><span class="o">)(</span><span class="s">"asserted_at"</span><span class="o">,</span> <span class="s">"subject"</span><span class="o">,</span> <span class="s">"property"</span><span class="o">,</span> <span class="s">"value"</span><span class="o">)</span>
 <span class="o">}</span>
 </code></pre></div></div>
 
@@ -103,11 +103,11 @@ using functions.</p>
 
 <p>Here’s an easy one to do the JSON parsing:</p>
 
-<div class="language-scala highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">def</span> <span class="n">parseJsonAsFact</span><span class="o">(</span><span class="n">pipe</span> <span class="k">:</span> <span class="kt">TypedPipe</span><span class="o">[</span><span class="kt">String</span><span class="o">])</span> <span class="k">:</span> <span class="kt">TypedPipe</span><span class="o">[</span><span class="kt">Fact</span><span class="o">]</span> <span class="k">=</span> <span class="o">{</span>
+<div class="language-scala highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">def</span> <span class="nf">parseJsonAsFact</span><span class="o">(</span><span class="n">pipe</span> <span class="k">:</span> <span class="kt">TypedPipe</span><span class="o">[</span><span class="kt">String</span><span class="o">])</span> <span class="k">:</span> <span class="kt">TypedPipe</span><span class="o">[</span><span class="kt">Fact</span><span class="o">]</span> <span class="k">=</span> <span class="o">{</span>
   <span class="n">pipe</span>
-    <span class="o">.</span><span class="n">map</span>    <span class="o">{</span> <span class="k">_</span><span class="o">.</span><span class="n">decodeOption</span><span class="o">[</span><span class="kt">Fact</span><span class="o">]</span> <span class="o">}</span>
-    <span class="o">.</span><span class="n">filter</span> <span class="o">{</span> <span class="k">_</span><span class="o">.</span><span class="n">nonEmpty</span> <span class="o">}</span>
-    <span class="o">.</span><span class="n">map</span>    <span class="o">{</span> <span class="k">_</span><span class="o">.</span><span class="n">orNull</span> <span class="o">}</span>
+    <span class="o">.</span><span class="py">map</span>    <span class="o">{</span> <span class="nv">_</span><span class="o">.</span><span class="py">decodeOption</span><span class="o">[</span><span class="kt">Fact</span><span class="o">]</span> <span class="o">}</span>
+    <span class="o">.</span><span class="py">filter</span> <span class="o">{</span> <span class="nv">_</span><span class="o">.</span><span class="py">nonEmpty</span> <span class="o">}</span>
+    <span class="o">.</span><span class="py">map</span>    <span class="o">{</span> <span class="nv">_</span><span class="o">.</span><span class="py">orNull</span> <span class="o">}</span>
 <span class="o">}</span>
 </code></pre></div></div>
 
@@ -120,22 +120,22 @@ using functions.</p>
 assemble our small functions with Scala’s <code class="highlighter-rouge">andThen</code> combinator.  This makes one
 large function that is named <code class="highlighter-rouge">job</code>, which we then run with the input.</p>
 
-<div class="language-scala highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">val</span> <span class="n">input_file</span>  <span class="k">=</span> <span class="n">args</span><span class="o">.</span><span class="n">getOrElse</span><span class="o">(</span><span class="s">"input"</span><span class="o">,</span>  <span class="s">"/master-dataset"</span><span class="o">)</span>
-<span class="k">val</span> <span class="n">output_file</span> <span class="k">=</span> <span class="n">args</span><span class="o">.</span><span class="n">getOrElse</span><span class="o">(</span><span class="s">"output"</span><span class="o">,</span> <span class="s">"/output"</span><span class="o">)</span>
+<div class="language-scala highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">val</span> <span class="nv">input_file</span>  <span class="k">=</span> <span class="nv">args</span><span class="o">.</span><span class="py">getOrElse</span><span class="o">(</span><span class="s">"input"</span><span class="o">,</span>  <span class="s">"/master-dataset"</span><span class="o">)</span>
+<span class="k">val</span> <span class="nv">output_file</span> <span class="k">=</span> <span class="nv">args</span><span class="o">.</span><span class="py">getOrElse</span><span class="o">(</span><span class="s">"output"</span><span class="o">,</span> <span class="s">"/output"</span><span class="o">)</span>
 
 <span class="c1">// Everything is stored as a SequenceFile, where the key is the timestamp it was recorded.
-</span><span class="k">val</span> <span class="n">source</span>   <span class="k">=</span> <span class="nc">WritableSequenceFile</span><span class="o">[</span><span class="kt">DoubleWritable</span>, <span class="kt">Text</span><span class="o">](</span><span class="n">input_file</span><span class="o">,</span> <span class="o">(</span><span class="ss">'sequenceFileKey,</span> <span class="ss">'factJSON)</span><span class="o">)</span>
-<span class="k">val</span> <span class="n">rawInput</span> <span class="k">=</span> <span class="nc">TypedPipe</span><span class="o">.</span><span class="n">from</span><span class="o">(</span><span class="n">source</span><span class="o">)</span>
-<span class="k">val</span> <span class="n">input</span>    <span class="k">=</span> <span class="n">rawInput</span><span class="o">.</span><span class="n">map</span> <span class="o">{</span> <span class="k">_</span><span class="o">.</span><span class="n">_2</span><span class="o">.</span><span class="n">toString</span> <span class="o">}</span> <span class="c1">// TypedPipe[String]
+</span><span class="k">val</span> <span class="nv">source</span>   <span class="k">=</span> <span class="nc">WritableSequenceFile</span><span class="o">[</span><span class="kt">DoubleWritable</span>, <span class="kt">Text</span><span class="o">](</span><span class="n">input_file</span><span class="o">,</span> <span class="o">(</span><span class="ss">'sequenceFileKey,</span> <span class="ss">'factJSON)</span><span class="o">)</span>
+<span class="k">val</span> <span class="nv">rawInput</span> <span class="k">=</span> <span class="nv">TypedPipe</span><span class="o">.</span><span class="py">from</span><span class="o">(</span><span class="n">source</span><span class="o">)</span>
+<span class="k">val</span> <span class="nv">input</span>    <span class="k">=</span> <span class="nv">rawInput</span><span class="o">.</span><span class="py">map</span> <span class="o">{</span> <span class="nv">_</span><span class="o">.</span><span class="py">_2</span><span class="o">.</span><span class="py">toString</span> <span class="o">}</span> <span class="c1">// TypedPipe[String]
 </span>
 <span class="c1">// This is a single column, so Tsv is misleading, no tabs will be output
-</span><span class="k">val</span> <span class="n">output</span> <span class="k">=</span> <span class="nc">TypedTsv</span><span class="o">[</span><span class="kt">String</span><span class="o">](</span><span class="n">output_file</span><span class="o">)</span>
+</span><span class="k">val</span> <span class="nv">output</span> <span class="k">=</span> <span class="nc">TypedTsv</span><span class="o">[</span><span class="kt">String</span><span class="o">](</span><span class="n">output_file</span><span class="o">)</span>
 
 <span class="c1">// Build up a large function that is our entire pipeline.
-</span><span class="k">val</span> <span class="n">job</span> <span class="k">=</span> <span class="n">parseJsonAsFact</span> <span class="k">_</span> <span class="n">andThen</span>
+</span><span class="k">val</span> <span class="nv">job</span> <span class="k">=</span> <span class="n">parseJsonAsFact</span> <span class="k">_</span> <span class="n">andThen</span>
           <span class="c1">///// More steps here.
 </span>
-<span class="n">job</span><span class="o">(</span><span class="n">input</span><span class="o">).</span><span class="n">write</span><span class="o">(</span><span class="n">output</span><span class="o">)</span>
+<span class="nf">job</span><span class="o">(</span><span class="n">input</span><span class="o">).</span><span class="py">write</span><span class="o">(</span><span class="n">output</span><span class="o">)</span>
 </code></pre></div></div>
 
 <h2 id="finishing-up-the-job">Finishing up the job</h2>
@@ -144,15 +144,15 @@ large function that is named <code class="highlighter-rouge">job</code>, which w
 to figure out how <code class="highlighter-rouge">filterByType</code> could be parameterized by the thing I was filtering.</p>
 
 <div class="language-scala highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// TypedPipe[String] =&gt; TypedPipe[String], which is handily our input and output types.
-</span><span class="k">val</span> <span class="n">job</span> <span class="k">=</span> <span class="n">facts</span><span class="o">.</span><span class="n">parseJsonAsFact</span> <span class="k">_</span>                        <span class="n">andThen</span>   <span class="c1">//    TypedPipe[Fact]
-</span>          <span class="o">(</span><span class="n">facts</span><span class="o">.</span><span class="n">filterByType</span> <span class="k">_</span><span class="o">).</span><span class="n">curried</span><span class="o">(</span><span class="s">"observations"</span><span class="o">)</span> <span class="n">andThen</span>   <span class="c1">// =&gt; TypedPipe[Fact] (only observation related ones)
-</span>          <span class="n">facts</span><span class="o">.</span><span class="n">filterNewest</span> <span class="k">_</span>                           <span class="n">andThen</span>   <span class="c1">// =&gt; TypedPipe[Fact] (only the newest of any given subject/property)
+</span><span class="k">val</span> <span class="nv">job</span> <span class="k">=</span> <span class="nv">facts</span><span class="o">.</span><span class="py">parseJsonAsFact</span> <span class="k">_</span>                        <span class="n">andThen</span>   <span class="c1">//    TypedPipe[Fact]
+</span>          <span class="o">(</span><span class="nv">facts</span><span class="o">.</span><span class="py">filterByType</span> <span class="k">_</span><span class="o">).</span><span class="py">curried</span><span class="o">(</span><span class="s">"observations"</span><span class="o">)</span> <span class="n">andThen</span>   <span class="c1">// =&gt; TypedPipe[Fact] (only observation related ones)
+</span>          <span class="nv">facts</span><span class="o">.</span><span class="py">filterNewest</span> <span class="k">_</span>                           <span class="n">andThen</span>   <span class="c1">// =&gt; TypedPipe[Fact] (only the newest of any given subject/property)
 </span>          <span class="n">createMeasurementDate</span> <span class="k">_</span>                        <span class="n">andThen</span>   <span class="c1">// =&gt; TypedPipe[Fact] (new records with measurement_date in the stream)
 </span>          <span class="n">mergeObservations</span> <span class="k">_</span>                            <span class="n">andThen</span>   <span class="c1">// =&gt; TypedPipe[Observation] combine facts into observations
 </span>          <span class="n">renderAsJson</span> <span class="k">_</span>                                           <span class="c1">// =&gt; TypedPipe[String] observations spun out as json
 </span>
-<span class="k">def</span> <span class="n">filterByType</span><span class="o">(</span><span class="n">filter</span> <span class="k">:</span> <span class="kt">String</span><span class="o">,</span> <span class="n">pipe</span> <span class="k">:</span> <span class="kt">TypedPipe</span><span class="o">[</span><span class="kt">Fact</span><span class="o">])</span> <span class="k">:</span> <span class="kt">TypedPipe</span><span class="o">[</span><span class="kt">Fact</span><span class="o">]</span> <span class="k">=</span> <span class="o">{</span>
-  <span class="n">pipe</span><span class="o">.</span><span class="n">filter</span> <span class="o">{</span> <span class="k">_</span><span class="o">.</span><span class="n">subject</span><span class="o">.</span><span class="n">startsWith</span><span class="o">(</span><span class="n">filter</span><span class="o">)</span> <span class="o">}</span>
+<span class="k">def</span> <span class="nf">filterByType</span><span class="o">(</span><span class="n">filter</span> <span class="k">:</span> <span class="kt">String</span><span class="o">,</span> <span class="n">pipe</span> <span class="k">:</span> <span class="kt">TypedPipe</span><span class="o">[</span><span class="kt">Fact</span><span class="o">])</span> <span class="k">:</span> <span class="kt">TypedPipe</span><span class="o">[</span><span class="kt">Fact</span><span class="o">]</span> <span class="k">=</span> <span class="o">{</span>
+  <span class="nv">pipe</span><span class="o">.</span><span class="py">filter</span> <span class="o">{</span> <span class="nv">_</span><span class="o">.</span><span class="py">subject</span><span class="o">.</span><span class="py">startsWith</span><span class="o">(</span><span class="n">filter</span><span class="o">)</span> <span class="o">}</span>
 <span class="o">}</span>
 </code></pre></div></div>
 
@@ -164,16 +164,16 @@ changes a <code class="highlighter-rouge">TypedPipe</code> into a <code class="h
 out to be easy - just define the sorting, and call it in a rather unintuitive
 way.</p>
 
-<div class="language-scala highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">def</span> <span class="n">filterNewest</span><span class="o">(</span><span class="n">pipe</span> <span class="k">:</span> <span class="kt">TypedPipe</span><span class="o">[</span><span class="kt">Fact</span><span class="o">])</span> <span class="k">:</span> <span class="kt">TypedPipe</span><span class="o">[</span><span class="kt">Fact</span><span class="o">]</span> <span class="k">=</span> <span class="o">{</span>
+<div class="language-scala highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">def</span> <span class="nf">filterNewest</span><span class="o">(</span><span class="n">pipe</span> <span class="k">:</span> <span class="kt">TypedPipe</span><span class="o">[</span><span class="kt">Fact</span><span class="o">])</span> <span class="k">:</span> <span class="kt">TypedPipe</span><span class="o">[</span><span class="kt">Fact</span><span class="o">]</span> <span class="k">=</span> <span class="o">{</span>
   <span class="n">pipe</span>
-    <span class="o">.</span><span class="n">groupBy</span> <span class="o">{</span> <span class="n">fact</span> <span class="k">:</span> <span class="kt">Fact</span> <span class="o">=&gt;</span> <span class="o">(</span><span class="n">fact</span><span class="o">.</span><span class="n">subject</span><span class="o">,</span> <span class="n">fact</span><span class="o">.</span><span class="n">property</span><span class="o">)</span> <span class="o">}</span> <span class="c1">// =&gt; Grouped[Fact, (String, String)]
-</span>    <span class="o">.</span><span class="n">sortedReverseTake</span><span class="o">(</span><span class="mi">1</span><span class="o">)(</span><span class="nc">AssertedAtOrdering</span><span class="o">)</span>
-    <span class="o">.</span><span class="n">values</span>
-    <span class="o">.</span><span class="n">flatten</span>
+    <span class="o">.</span><span class="py">groupBy</span> <span class="o">{</span> <span class="n">fact</span> <span class="k">:</span> <span class="kt">Fact</span> <span class="o">=&gt;</span> <span class="o">(</span><span class="nv">fact</span><span class="o">.</span><span class="py">subject</span><span class="o">,</span> <span class="nv">fact</span><span class="o">.</span><span class="py">property</span><span class="o">)</span> <span class="o">}</span> <span class="c1">// =&gt; Grouped[Fact, (String, String)]
+</span>    <span class="o">.</span><span class="py">sortedReverseTake</span><span class="o">(</span><span class="mi">1</span><span class="o">)(</span><span class="nc">AssertedAtOrdering</span><span class="o">)</span>
+    <span class="o">.</span><span class="py">values</span>
+    <span class="o">.</span><span class="py">flatten</span>
 <span class="o">}</span>
 
 <span class="k">object</span> <span class="nc">AssertedAtOrdering</span> <span class="k">extends</span> <span class="nc">Ordering</span><span class="o">[</span><span class="kt">Fact</span><span class="o">]</span> <span class="o">{</span>
-  <span class="k">def</span> <span class="n">compare</span><span class="o">(</span><span class="n">a</span><span class="k">:</span><span class="kt">Fact</span><span class="o">,</span> <span class="n">b</span><span class="k">:</span><span class="kt">Fact</span><span class="o">)</span> <span class="k">=</span> <span class="n">a</span><span class="o">.</span><span class="n">asserted_at</span> <span class="n">compare</span> <span class="n">b</span><span class="o">.</span><span class="n">asserted_at</span>
+  <span class="k">def</span> <span class="nf">compare</span><span class="o">(</span><span class="n">a</span><span class="k">:</span><span class="kt">Fact</span><span class="o">,</span> <span class="n">b</span><span class="k">:</span><span class="kt">Fact</span><span class="o">)</span> <span class="k">=</span> <span class="nv">a</span><span class="o">.</span><span class="py">asserted_at</span> <span class="n">compare</span> <span class="nv">b</span><span class="o">.</span><span class="py">asserted_at</span>
 <span class="o">}</span>
 </code></pre></div></div>
 
@@ -186,15 +186,15 @@ with filters, sidelining the uninteresting half (<code class="highlighter-rouge"
 returning multiple values from the <code class="highlighter-rouge">measurement_at_pipe</code>.  Finally the
 sidelined pipe can be merged back into the stream.</p>
 
-<div class="language-scala highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">def</span> <span class="n">createMeasurementDate</span><span class="o">(</span><span class="n">pipe</span> <span class="k">:</span> <span class="kt">TypedPipe</span><span class="o">[</span><span class="kt">Fact</span><span class="o">])</span> <span class="k">:</span> <span class="kt">TypedPipe</span><span class="o">[</span><span class="kt">Fact</span><span class="o">]</span> <span class="k">=</span> <span class="o">{</span>
-  <span class="k">val</span> <span class="n">measurement_at_pipe</span>     <span class="k">=</span> <span class="n">pipe</span><span class="o">.</span><span class="n">filter</span>    <span class="o">{</span> <span class="n">fact</span> <span class="k">:</span> <span class="kt">Fact</span> <span class="o">=&gt;</span> <span class="n">fact</span><span class="o">.</span><span class="n">property</span> <span class="o">==</span> <span class="s">"measurement_at"</span> <span class="o">}</span>
-  <span class="k">val</span> <span class="n">not_measurement_at_pipe</span> <span class="k">=</span> <span class="n">pipe</span><span class="o">.</span><span class="n">filterNot</span> <span class="o">{</span> <span class="n">fact</span> <span class="k">:</span> <span class="kt">Fact</span> <span class="o">=&gt;</span> <span class="n">fact</span><span class="o">.</span><span class="n">property</span> <span class="o">==</span> <span class="s">"measurement_at"</span> <span class="o">}</span>
-  <span class="k">val</span> <span class="n">converted_pipe</span> <span class="k">=</span> <span class="n">measurement_at_pipe</span>
-    <span class="o">.</span><span class="n">flatMap</span> <span class="o">{</span> <span class="n">fact</span> <span class="k">:</span> <span class="kt">Fact</span> <span class="o">=&gt;</span>
+<div class="language-scala highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">def</span> <span class="nf">createMeasurementDate</span><span class="o">(</span><span class="n">pipe</span> <span class="k">:</span> <span class="kt">TypedPipe</span><span class="o">[</span><span class="kt">Fact</span><span class="o">])</span> <span class="k">:</span> <span class="kt">TypedPipe</span><span class="o">[</span><span class="kt">Fact</span><span class="o">]</span> <span class="k">=</span> <span class="o">{</span>
+  <span class="k">val</span> <span class="nv">measurement_at_pipe</span>     <span class="k">=</span> <span class="nv">pipe</span><span class="o">.</span><span class="py">filter</span>    <span class="o">{</span> <span class="n">fact</span> <span class="k">:</span> <span class="kt">Fact</span> <span class="o">=&gt;</span> <span class="nv">fact</span><span class="o">.</span><span class="py">property</span> <span class="o">==</span> <span class="s">"measurement_at"</span> <span class="o">}</span>
+  <span class="k">val</span> <span class="nv">not_measurement_at_pipe</span> <span class="k">=</span> <span class="nv">pipe</span><span class="o">.</span><span class="py">filterNot</span> <span class="o">{</span> <span class="n">fact</span> <span class="k">:</span> <span class="kt">Fact</span> <span class="o">=&gt;</span> <span class="nv">fact</span><span class="o">.</span><span class="py">property</span> <span class="o">==</span> <span class="s">"measurement_at"</span> <span class="o">}</span>
+  <span class="k">val</span> <span class="nv">converted_pipe</span> <span class="k">=</span> <span class="n">measurement_at_pipe</span>
+    <span class="o">.</span><span class="py">flatMap</span> <span class="o">{</span> <span class="n">fact</span> <span class="k">:</span> <span class="kt">Fact</span> <span class="o">=&gt;</span>
       <span class="nc">List</span><span class="o">(</span>
             <span class="n">fact</span><span class="o">,</span>
-            <span class="n">fact</span><span class="o">.</span><span class="n">copy</span><span class="o">(</span><span class="n">property</span> <span class="k">=</span> <span class="s">"measurement_date"</span><span class="o">,</span>
-                      <span class="n">value</span>    <span class="k">=</span> <span class="n">jString</span><span class="o">(</span><span class="n">fact</span><span class="o">.</span><span class="n">value</span><span class="o">.</span><span class="n">stringOr</span><span class="o">(</span><span class="s">"0000-00-00"</span><span class="o">).</span><span class="n">substring</span><span class="o">(</span><span class="mi">0</span><span class="o">,</span> <span class="s">"yyyy-mm-dd"</span><span class="o">.</span><span class="n">length</span><span class="o">)))</span>
+            <span class="nv">fact</span><span class="o">.</span><span class="py">copy</span><span class="o">(</span><span class="n">property</span> <span class="k">=</span> <span class="s">"measurement_date"</span><span class="o">,</span>
+                      <span class="n">value</span>    <span class="k">=</span> <span class="nf">jString</span><span class="o">(</span><span class="nv">fact</span><span class="o">.</span><span class="py">value</span><span class="o">.</span><span class="py">stringOr</span><span class="o">(</span><span class="s">"0000-00-00"</span><span class="o">).</span><span class="py">substring</span><span class="o">(</span><span class="mi">0</span><span class="o">,</span> <span class="s">"yyyy-mm-dd"</span><span class="o">.</span><span class="py">length</span><span class="o">)))</span>
           <span class="o">)</span>
     <span class="o">}</span>
 
@@ -233,7 +233,7 @@ them, than trying to track sets of untyped, named fields.</p>
 
     <footer>
   <span>
-    &copy; <time datetime="2019-12-08 08:39:05 -0700">2019</time> . Made with Jekyll using the <a href="https://github.com/chesterhow/tale/">Tale</a> theme.
+    &copy; <time datetime="2019-12-08 08:44:11 -0700">2019</time> . Made with Jekyll using the <a href="https://github.com/chesterhow/tale/">Tale</a> theme.
   </span>
 </footer>
 

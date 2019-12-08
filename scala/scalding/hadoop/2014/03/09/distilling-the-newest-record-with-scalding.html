@@ -112,8 +112,8 @@
 <p>Similarly, the final output should be stored as JSON. The <code class="highlighter-rouge">JsonLine</code> class makes that really easy, but is fairly inflexible.  It may be that I’ll need to write my own output class at some point.</p>
 
 <div class="language-scala highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">class</span> <span class="nc">ExtractJSON</span><span class="o">(</span><span class="n">args</span> <span class="k">:</span> <span class="kt">Args</span><span class="o">)</span> <span class="k">extends</span> <span class="nc">Job</span><span class="o">(</span><span class="n">args</span><span class="o">)</span> <span class="o">{</span>
-  <span class="k">val</span> <span class="n">input</span> <span class="k">=</span> <span class="nc">WritableSequenceFile</span><span class="o">(</span><span class="s">"/advanced-apps/master-dataset/Facts.1394232008699"</span><span class="o">,</span> <span class="o">(</span><span class="ss">'sequenceFileKey,</span> <span class="ss">'factJSON)</span><span class="o">)</span>
-  <span class="k">val</span> <span class="n">output</span> <span class="k">=</span> <span class="nc">JsonLine</span><span class="o">(</span><span class="s">"/fact_data_output"</span><span class="o">)</span>
+  <span class="k">val</span> <span class="nv">input</span> <span class="k">=</span> <span class="nc">WritableSequenceFile</span><span class="o">(</span><span class="s">"/advanced-apps/master-dataset/Facts.1394232008699"</span><span class="o">,</span> <span class="o">(</span><span class="ss">'sequenceFileKey,</span> <span class="ss">'factJSON)</span><span class="o">)</span>
+  <span class="k">val</span> <span class="nv">output</span> <span class="k">=</span> <span class="nc">JsonLine</span><span class="o">(</span><span class="s">"/fact_data_output"</span><span class="o">)</span>
 </code></pre></div></div>
 
 <h3 id="json-parse">JSON Parse</h3>
@@ -125,17 +125,17 @@
 <p>Notice that a new field that hasn’t been mentioned shows up too, indicating if the JSON parsed or not.  We will use that in the very next code snippet.</p>
 
 <div class="language-scala highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  <span class="n">input</span>
-    <span class="o">.</span><span class="n">read</span>
+    <span class="o">.</span><span class="py">read</span>
 
     <span class="c1">// Parse the json of each fact. Extract out the 4 expected values.
-</span>    <span class="o">.</span><span class="n">map</span><span class="o">((</span><span class="ss">'factJSON)</span> <span class="o">-&gt;</span> <span class="o">(</span><span class="ss">'parse_status,</span> <span class="ss">'asserted_at,</span> <span class="ss">'subject,</span> <span class="ss">'property,</span> <span class="ss">'value)</span><span class="o">)</span> <span class="o">{</span>
+</span>    <span class="o">.</span><span class="py">map</span><span class="o">((</span><span class="ss">'factJSON)</span> <span class="o">-&gt;</span> <span class="o">(</span><span class="ss">'parse_status,</span> <span class="ss">'asserted_at,</span> <span class="ss">'subject,</span> <span class="ss">'property,</span> <span class="ss">'value)</span><span class="o">)</span> <span class="o">{</span>
       <span class="n">line</span><span class="k">:</span> <span class="kt">String</span> <span class="o">=&gt;</span> <span class="o">{</span>
-        <span class="nc">JSON</span><span class="o">.</span><span class="n">parseFull</span><span class="o">(</span><span class="n">line</span><span class="o">)</span> <span class="k">match</span> <span class="o">{</span>
+        <span class="nv">JSON</span><span class="o">.</span><span class="py">parseFull</span><span class="o">(</span><span class="n">line</span><span class="o">)</span> <span class="k">match</span> <span class="o">{</span>
           <span class="k">case</span> <span class="nc">Some</span><span class="o">(</span><span class="n">data</span><span class="k">:</span> <span class="kt">Map</span><span class="o">[</span><span class="kt">String</span>, <span class="kt">Any</span><span class="o">])</span> <span class="k">=&gt;</span> <span class="o">(</span><span class="s">"success"</span><span class="o">,</span>
-                                                <span class="n">data</span><span class="o">(</span><span class="s">"asserted_at"</span><span class="o">),</span>
-                                                <span class="n">data</span><span class="o">(</span><span class="s">"subject"</span><span class="o">),</span>
-                                                <span class="n">data</span><span class="o">(</span><span class="s">"property"</span><span class="o">),</span>
-                                                <span class="n">data</span><span class="o">(</span><span class="s">"value"</span><span class="o">)</span>
+                                                <span class="nf">data</span><span class="o">(</span><span class="s">"asserted_at"</span><span class="o">),</span>
+                                                <span class="nf">data</span><span class="o">(</span><span class="s">"subject"</span><span class="o">),</span>
+                                                <span class="nf">data</span><span class="o">(</span><span class="s">"property"</span><span class="o">),</span>
+                                                <span class="nf">data</span><span class="o">(</span><span class="s">"value"</span><span class="o">)</span>
                                               <span class="o">)</span>
           <span class="k">case</span> <span class="nc">None</span> <span class="k">=&gt;</span> <span class="o">(</span><span class="s">"failed"</span><span class="o">,</span> <span class="s">""</span><span class="o">,</span> <span class="s">""</span><span class="o">,</span> <span class="s">""</span><span class="o">,</span> <span class="s">""</span><span class="o">)</span>
         <span class="o">}</span>
@@ -149,8 +149,8 @@
 
 <p>After that’s done, we have no more use for that field, so throw it away to keep the dataset small as we continue to move through the input.</p>
 
-<div class="language-scala highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    <span class="o">.</span><span class="n">filter</span><span class="o">(</span><span class="ss">'parse_status)</span> <span class="o">{</span> <span class="n">status</span><span class="k">:</span> <span class="kt">String</span> <span class="o">=&gt;</span> <span class="n">status</span> <span class="o">!=</span> <span class="s">"failed"</span> <span class="o">}</span>
-    <span class="o">.</span><span class="n">discard</span><span class="o">(</span><span class="ss">'parse_status)</span>
+<div class="language-scala highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    <span class="o">.</span><span class="py">filter</span><span class="o">(</span><span class="ss">'parse_status)</span> <span class="o">{</span> <span class="n">status</span><span class="k">:</span> <span class="kt">String</span> <span class="o">=&gt;</span> <span class="n">status</span> <span class="o">!=</span> <span class="s">"failed"</span> <span class="o">}</span>
+    <span class="o">.</span><span class="py">discard</span><span class="o">(</span><span class="ss">'parse_status)</span>
 </code></pre></div></div>
 
 <h3 id="find-the-newest">Find the newest</h3>
@@ -166,13 +166,13 @@
 <p>Once done, flatten out the temporary <code class="highlighter-rouge">items</code> field that we stored that pair of <code class="highlighter-rouge">asserted_at, value</code> into, and get rid of it.</p>
 
 <div class="language-scala highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    <span class="c1">// Find the newest asserted at for each combo of subject &amp; property
-</span>    <span class="o">.</span><span class="n">groupBy</span><span class="o">(</span><span class="ss">'subject,</span> <span class="ss">'property)</span> <span class="o">{</span>
-      <span class="k">_</span><span class="o">.</span><span class="n">sortWithTake</span><span class="o">[(</span><span class="kt">String</span>, <span class="kt">Any</span><span class="o">)]((</span><span class="ss">'asserted_at,</span> <span class="ss">'value)</span> <span class="o">-&gt;</span> <span class="ss">'items </span><span class="o">,</span> <span class="mi">1</span><span class="o">)</span> <span class="o">{</span>
-        <span class="k">case</span> <span class="o">((</span><span class="n">asL</span><span class="o">,</span> <span class="k">_</span><span class="o">),</span> <span class="o">(</span><span class="n">asR</span><span class="o">,</span> <span class="k">_</span><span class="o">))</span> <span class="k">=&gt;</span> <span class="n">asL</span> <span class="o">&gt;</span> <span class="n">asR</span>
+</span>    <span class="o">.</span><span class="py">groupBy</span><span class="o">(</span><span class="ss">'subject,</span> <span class="ss">'property)</span> <span class="o">{</span>
+      <span class="nv">_</span><span class="o">.</span><span class="py">sortWithTake</span><span class="o">[(</span><span class="kt">String</span>, <span class="kt">Any</span><span class="o">)]((</span><span class="ss">'asserted_at,</span> <span class="ss">'value)</span> <span class="o">-&gt;</span> <span class="ss">'items </span><span class="o">,</span> <span class="mi">1</span><span class="o">)</span> <span class="o">{</span>
+        <span class="nf">case</span> <span class="o">((</span><span class="n">asL</span><span class="o">,</span> <span class="k">_</span><span class="o">),</span> <span class="o">(</span><span class="n">asR</span><span class="o">,</span> <span class="k">_</span><span class="o">))</span> <span class="k">=&gt;</span> <span class="n">asL</span> <span class="o">&gt;</span> <span class="n">asR</span>
       <span class="o">}</span>
     <span class="o">}</span>
-    <span class="o">.</span><span class="n">flatten</span><span class="o">[(</span><span class="kt">String</span>, <span class="kt">Any</span><span class="o">)]((</span><span class="ss">'items)</span> <span class="o">-&gt;</span> <span class="o">(</span><span class="ss">'asserted_at,</span> <span class="ss">'value)</span><span class="o">)</span>
-    <span class="o">.</span><span class="n">discard</span><span class="o">(</span><span class="ss">'items)</span>
+    <span class="o">.</span><span class="py">flatten</span><span class="o">[(</span><span class="kt">String</span>, <span class="kt">Any</span><span class="o">)]((</span><span class="ss">'items)</span> <span class="o">-&gt;</span> <span class="o">(</span><span class="ss">'asserted_at,</span> <span class="ss">'value)</span><span class="o">)</span>
+    <span class="o">.</span><span class="py">discard</span><span class="o">(</span><span class="ss">'items)</span>
 </code></pre></div></div>
 
 <h3 id="combine-the-many-facts">Combine the many facts</h3>
@@ -200,7 +200,7 @@
 
 <p>So now we have a tuple of data we want, lets serialize it back out to disk and close the class we were working inside of.</p>
 
-<div class="language-scala highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    <span class="o">.</span><span class="n">write</span><span class="o">(</span><span class="n">output</span><span class="o">)</span>
+<div class="language-scala highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    <span class="o">.</span><span class="py">write</span><span class="o">(</span><span class="n">output</span><span class="o">)</span>
 <span class="o">}</span>
 </code></pre></div></div>
 
@@ -230,7 +230,7 @@
 
     <footer>
   <span>
-    &copy; <time datetime="2019-12-08 08:39:05 -0700">2019</time> . Made with Jekyll using the <a href="https://github.com/chesterhow/tale/">Tale</a> theme.
+    &copy; <time datetime="2019-12-08 08:44:11 -0700">2019</time> . Made with Jekyll using the <a href="https://github.com/chesterhow/tale/">Tale</a> theme.
   </span>
 </footer>
 
